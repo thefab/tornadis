@@ -1,0 +1,2 @@
+tornado==4.0.1
+hiredis==0.1.4
