@@ -11,3 +11,5 @@ script: nosetests
 notifications:
     email: fabien.marty@gmail.com
     on_success: change
+services:
+  - redis-server
