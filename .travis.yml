@@ -1,0 +1,13 @@
+language: python
+python:
+    - "2.7"
+    - "3.2"
+    - "3.3"
+    - "3.4"
+install:
+    - pip install -r test-requirements.txt --use-mirrors
+    - python setup.py develop
+script: nosetests
+notifications:
+    email: fabien.marty@gmail.com
+    on_success: change
