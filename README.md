@@ -4,6 +4,7 @@
 
 [![Build Status](https://travis-ci.org/thefab/tornadis.png)](https://travis-ci.org/thefab/tornadis)
 [![Coverage Status](https://coveralls.io/repos/thefab/tornadis/badge.png)](https://coveralls.io/r/thefab/tornadis)
+[![Code Health](https://landscape.io/github/thefab/tornadis/master/landscape.png)](https://landscape.io/github/thefab/tornadis/master)
 
 ## What is it ?
 
