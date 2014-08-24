@@ -7,7 +7,7 @@ python:
 install:
     - pip install -r test-requirements.txt --use-mirrors
     - python setup.py develop
-script: nosetests
+script: make coveralls
 notifications:
     email: fabien.marty@gmail.com
     on_success: change

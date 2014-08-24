@@ -28,6 +28,10 @@ test:
 	flake8 .
 	cd tests && nosetests
 
+coveralls:
+	flake8 .
+	cd tests && nosetests --with-coverage --cover-package=tornadis
+
 upload:
 	python setup.py sdist register upload
 
