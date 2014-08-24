@@ -26,7 +26,7 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         c.disconnect()
 
     def _test_write_cb(self, data):
-        self.assertEquals(data, "+PONG\r\n+OK\r\n")
+        self.assertEquals(data, b"+PONG\r\n+OK\r\n")
         self._test_write_condition.notify()
 
     @tornado.testing.gen_test

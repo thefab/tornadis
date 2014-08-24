@@ -28,5 +28,5 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         c = Client()
         yield c.connect()
         res = yield c.call('PING')
-        self.assertEquals(res, "PONG")
+        self.assertEquals(res, b"PONG")
         yield c.disconnect()
