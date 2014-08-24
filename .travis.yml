@@ -13,3 +13,5 @@ notifications:
     on_success: change
 services:
   - redis-server
+after_success:
+  coveralls
