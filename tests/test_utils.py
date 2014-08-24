@@ -17,18 +17,12 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
         res = format_args_in_redis_protocol("SET", "key", "foobar")
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$6\r\nfoobar\r\n")
-        if six.PY2:
-            res = format_args_in_redis_protocol("SET", "key", u"foobar")
-        else:
-            res = format_args_in_redis_protocol("SET", "key", "foobar")
+        res = format_args_in_redis_protocol("SET", "key", six.u("foobar"))
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$6\r\nfoobar\r\n")
 
     def test_protocol3(self):
-        if six.PY2:
-            res = format_args_in_redis_protocol("SET", "key", u"é")
-        else:
-            res = format_args_in_redis_protocol("SET", "key", "é")
+        res = format_args_in_redis_protocol("SET", "key", six.u("é"))
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$2\r\n\xc3\xa9\r\n")
 
