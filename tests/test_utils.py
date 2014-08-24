@@ -22,7 +22,7 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
                           b"$6\r\nfoobar\r\n")
 
     def test_protocol3(self):
-        res = format_args_in_redis_protocol("SET", "key", six.u("é"))
+        res = format_args_in_redis_protocol("SET", "key", six.u("\xe9"))
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$2\r\n\xc3\xa9\r\n")
 
