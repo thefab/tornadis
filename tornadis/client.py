@@ -8,7 +8,6 @@ import tornado.ioloop
 import tornado.gen
 import hiredis
 import toro
-from six.moves import range as six_range
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
@@ -19,7 +18,7 @@ from tornadis.utils import format_args_in_redis_protocol
 
 class Client(object):
 
-    def __init__(self, host='localhost', port=6379, ioloop=None, pool=None):
+    def __init__(self, host='localhost', port=6379, ioloop=None):
         self.host = host
         self.port = port
         self.__reply_queue = toro.Queue()
@@ -75,7 +74,9 @@ class Client(object):
             msg = format_args_in_redis_protocol(*args)
             yield self.__connection.write(msg)
         result = []
-        for i in six_range(0, pipeline.number_of_stacked_calls):
+        i = 0
+        while i < pipeline.number_of_stacked_calls:
             reply = yield self.__reply_queue.get()
             result.append(reply)
+            i = i + 1
         raise tornado.gen.Return(result)
