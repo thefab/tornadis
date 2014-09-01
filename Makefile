@@ -30,7 +30,7 @@ test:
 
 coveralls:
 	flake8 .
-	cd tests && nosetests --with-coverage --cover-package=tornadis && coveralls
+	cd tests && nosetests --with-coverage --cover-package=tornadis && cd .. && ./.coveralls.sh
 
 upload:
 	python setup.py sdist register upload
