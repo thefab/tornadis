@@ -22,7 +22,7 @@ def format_args_in_redis_protocol(*args):
         elif isinstance(arg, six.string_types):
             # it's a basestring in Python2 => nothing to do
             pass
-        elif isinstance(arg, six.binary_type):
+        elif isinstance(arg, six.binary_type):  # pragma: no cover
             # it's a raw bytes string in Python3 => nothing to do
             pass
         elif isinstance(arg, six.integer_types):
