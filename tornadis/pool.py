@@ -35,13 +35,14 @@ class ClientPool(object):
         try:
             client = self.__pool.popleft()
         except IndexError:
-            client = yield self._make_client()
+            client = self._make_client()
             yield client.connect()
         raise tornado.gen.Return(client)
 
     def release_client(self, client):
         self.__pool.append(client)
-        self.__sem.release()
+        if self.__sem is not None:
+            self.__sem.release()
 
     def destroy(self):
         while True:
