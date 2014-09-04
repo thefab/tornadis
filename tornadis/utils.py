@@ -12,7 +12,7 @@ def format_args_in_redis_protocol(*args):
     l = "*%d" % len(args)
     if six.PY2:
         lines = [l]
-    else:
+    else:  # pragma: no cover
         lines = [l.encode('utf-8')]
     for arg in args:
         if isinstance(arg, six.text_type):
@@ -29,14 +29,14 @@ def format_args_in_redis_protocol(*args):
             tmp = "%d" % arg
             if six.PY2:
                 arg = tmp
-            else:
+            else:  # pragma: no cover
                 arg = tmp.encode('utf-8')
         else:
             raise Exception("don't know what to do with %s" % type(arg))
         l = "$%d" % len(arg)
         if six.PY2:
             lines.append(l)
-        else:
+        else:  # pragma: no cover
             lines.append(l.encode('utf-8'))
         lines.append(arg)
     lines.append(b"")
