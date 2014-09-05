@@ -8,6 +8,7 @@ import tornado.ioloop
 import tornado.gen
 import hiredis
 import toro
+import io
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
@@ -70,13 +71,14 @@ class Client(object):
 
     @tornado.gen.coroutine
     def _pipelined_call(self, pipeline):
-        for args in pipeline.args_generator():
+        buf = io.BytesIO()
+        for args in pipeline.pipelined_args:
             msg = format_args_in_redis_protocol(*args)
-            yield self.__connection.write(msg)
+            buf.write(msg)
+        yield self.__connection.write(buf.getvalue())
+        buf.close()
         result = []
-        i = 0
-        while i < pipeline.number_of_stacked_calls:
+        while len(result) < pipeline.number_of_stacked_calls:
             reply = yield self.__reply_queue.get()
             result.append(reply)
-            i = i + 1
         raise tornado.gen.Return(result)
