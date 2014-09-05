@@ -9,5 +9,6 @@ __version__ = ".".join([str(x) for x in version_info])
 
 from tornadis.client import Client
 from tornadis.pool import ClientPool
+from tornadis.pipeline import Pipeline
 
-__all__ = ['Client', 'ClientPool']
+__all__ = ['Client', 'ClientPool', 'Pipeline']
