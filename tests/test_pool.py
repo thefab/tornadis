@@ -55,3 +55,12 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.release_client(client2)
         c.release_client(client3)
         c.destroy()
+
+    @tornado.testing.gen_test
+    def test_get_client_context_manager(self):
+        c = ClientPool(max_size=1)
+        with (yield c.connected_client()) as client:
+            pass
+        client = yield c.get_connected_client()
+        c.release_client(client)
+        c.destroy()

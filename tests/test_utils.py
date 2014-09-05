@@ -3,8 +3,14 @@
 
 import six
 import tornado.testing
+import tornado.concurrent
 
 from tornadis.utils import format_args_in_redis_protocol
+from tornadis.utils import ContextManagerFuture
+
+
+class DummyException(Exception):
+    pass
 
 
 class UtilsTestCase(tornado.testing.AsyncTestCase):
@@ -38,3 +44,37 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
 
     def test_protocol_exception(self):
         self.assertRaises(Exception, format_args_in_redis_protocol, ["foo"])
+
+    def _test_context_manager_future_cb(self):
+        self._test_context_manager_future_cb_called = True
+
+    @tornado.testing.gen_test
+    def test_context_manager_future(self):
+        self._test_context_manager_future_cb_called = False
+        future = tornado.concurrent.Future()
+        future.set_result("foobar")
+        cb = self._test_context_manager_future_cb
+        cmf = ContextManagerFuture(future, cb)
+        with (yield cmf) as value:
+            self.assertEquals(value, "foobar")
+        boolean = self._test_context_manager_future_cb_called
+        self.assertTrue(boolean)
+
+    def _test_context_manager_future_exception_cb(self):
+        self._test_context_manager_future_exception_cb_called = True
+
+    @tornado.testing.gen_test
+    def test_context_manager_future_exception(self):
+        self._test_context_manager_future_exception_cb_called = False
+        future = tornado.concurrent.Future()
+        future.set_exception(DummyException())
+        cb = self._test_context_manager_future_exception_cb
+        cmf = ContextManagerFuture(future, cb)
+        try:
+            with (yield cmf):
+                raise Exception("exception not raised")
+            raise Exception("exception not raised")
+        except DummyException:
+            pass
+        boolean = self._test_context_manager_future_exception_cb_called
+        self.assertFalse(boolean)
