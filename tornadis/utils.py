@@ -6,6 +6,8 @@
 
 
 import six
+from tornado.concurrent import Future
+import contextlib
 
 
 def format_args_in_redis_protocol(*args):
@@ -41,3 +43,37 @@ def format_args_in_redis_protocol(*args):
         lines.append(arg)
     lines.append(b"")
     return b"\r\n".join(lines)
+
+
+# This class is "stolen" from here:
+# https://github.com/ajdavis/toro/blob/master/toro/__init__.py
+# Original credits to jesse@mongodb.com
+# Modified to be able to return the future result
+class ContextManagerFuture(Future):
+    """A Future that can be used with the "with" statement.
+    When a coroutine yields this Future, the return value is a context manager
+    """
+    def __init__(self, wrapped, exit_callback):
+        super(ContextManagerFuture, self).__init__()
+        wrapped.add_done_callback(self._done_callback)
+        self.exit_callback = exit_callback
+        self.wrapped = wrapped
+
+    def _done_callback(self, wrapped):
+        if wrapped.exception():
+            self.set_exception(wrapped.exception())
+        else:
+            self.set_result(wrapped.result())
+
+    def result(self):
+        if self.exception():
+            raise self.exception()
+        # Otherwise return a context manager that cleans up after the block.
+
+        @contextlib.contextmanager
+        def f():
+            try:
+                yield self.wrapped.result()
+            finally:
+                self.exit_callback()
+        return f()

@@ -6,9 +6,11 @@
 
 import tornado.gen
 import toro
+import functools
 from collections import deque
 
 from tornadis.client import Client
+from tornadis.utils import ContextManagerFuture
 
 # FIXME: error handling
 
@@ -38,6 +40,15 @@ class ClientPool(object):
             client = self._make_client()
             yield client.connect()
         raise tornado.gen.Return(client)
+
+    def connected_client(self):
+        future = self.get_connected_client()
+        cb = functools.partial(self._connected_client_release_cb, future)
+        return ContextManagerFuture(future, cb)
+
+    def _connected_client_release_cb(self, future=None):
+        client = future.result()
+        self.release_client(client)
 
     def release_client(self, client):
         self.__pool.append(client)
