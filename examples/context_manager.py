@@ -15,6 +15,7 @@ def ping_redis(pool, num):
 @tornado.gen.coroutine
 def multiple_ping_redis(pool):
     yield [ping_redis(pool, i) for i in range(0, 100)]
+    pool.destroy()
 
 
 def stop_loop(future):
