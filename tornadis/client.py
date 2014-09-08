@@ -69,6 +69,9 @@ class Client(object):
         reply = yield self.__reply_queue.get()
         raise tornado.gen.Return(reply)
 
+    def pop_message(self):
+        return self.__reply_queue.get()
+
     @tornado.gen.coroutine
     def _pipelined_call(self, pipeline):
         buf = io.BytesIO()
