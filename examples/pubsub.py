@@ -12,8 +12,8 @@ def pubsub():
         reply = yield client.pubsub_pop_message()
         print(reply)
         if reply[3] == "STOP":
-            r1 = yield client.pubsub_punsubscribe("foo*")
-            r2 = yield client.pubsub_unsubscribe("bar")
+            yield client.pubsub_punsubscribe("foo*")
+            yield client.pubsub_unsubscribe("bar")
             break
     yield client.disconnect()
 
