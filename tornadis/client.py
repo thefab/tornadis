@@ -74,6 +74,10 @@ class Client(object):
         reply = yield self.__reply_queue.get()
         raise tornado.gen.Return(reply)
 
+    def _simple_call_without_pop_reply(self, *args):
+        msg = format_args_in_redis_protocol(*args)
+        return self.__connection.write(msg)
+
     def pubsub_subscribe(self, *args):
         return self._pubsub_subscribe("SUBSCRIBE", *args)
 
@@ -82,10 +86,12 @@ class Client(object):
 
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
-        reply = yield self._simple_call(command, *args)
-        if len(reply) != 3 or reply[0].lower() != command.lower() or \
-           reply[2] == 0:
-            raise tornado.gen.Return(False)
+        yield self._simple_call_without_pop_reply(command, *args)
+        for _ in args:
+            reply = yield self.__reply_queue.get()
+            if len(reply) != 3 or reply[0].lower() != command.lower() or \
+               reply[2] == 0:
+                raise tornado.gen.Return(False)
         self.subscribed = True
         raise tornado.gen.Return(True)
 
@@ -97,21 +103,27 @@ class Client(object):
 
     @tornado.gen.coroutine
     def _pubsub_unsubscribe(self, command, *args):
-        reply = yield self._simple_call(command, *args)
-        if len(reply) != 3 or reply[0].lower() != command.lower():
-            raise tornado.gen.Return(False)
-        if reply[2] == 0:
+        yield self._simple_call_without_pop_reply(command, *args)
+        reply = None
+        for _ in args:
+            reply = yield self.__reply_queue.get()
+            if reply is None or len(reply) != 3 or \
+               reply[0].lower() != command.lower():
+                raise tornado.gen.Return(False)
+        if reply is not None and reply[2] == 0:
             self.subscribed = False
         raise tornado.gen.Return(True)
 
+    @tornado.gen.coroutine
     def pubsub_pop_message(self, deadline=None):
-        if not(self.subscribed):
+        if not self.subscribed:
             raise Exception("you must subcribe before using "
                             "pubsub_pop_message")
         try:
-            return self.__reply_queue.get(deadline=deadline)
+            reply = yield self.__reply_queue.get(deadline=deadline)
         except toro.Timeout:
-            return tornado.gen.maybe_future(None)
+            reply = None
+        raise tornado.gen.Return(reply)
 
     @tornado.gen.coroutine
     def _pipelined_call(self, pipeline):
