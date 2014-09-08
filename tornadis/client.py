@@ -79,16 +79,17 @@ class Client(object):
         return self.__connection.write(msg)
 
     def pubsub_subscribe(self, *args):
-        return self._pubsub_subscribe("SUBSCRIBE", *args)
+        return self._pubsub_subscribe(b"SUBSCRIBE", *args)
 
     def pubsub_psubscribe(self, *args):
-        return self._pubsub_subscribe("PSUBSCRIBE", *args)
+        return self._pubsub_subscribe(b"PSUBSCRIBE", *args)
 
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
         yield self._simple_call_without_pop_reply(command, *args)
         for _ in args:
             reply = yield self.__reply_queue.get()
+            print(reply)
             if len(reply) != 3 or reply[0].lower() != command.lower() or \
                reply[2] == 0:
                 raise tornado.gen.Return(False)
@@ -96,10 +97,10 @@ class Client(object):
         raise tornado.gen.Return(True)
 
     def pubsub_unsubscribe(self, *args):
-        return self._pubsub_unsubscribe("UNSUBSCRIBE", *args)
+        return self._pubsub_unsubscribe(b"UNSUBSCRIBE", *args)
 
     def pubsub_punsubscribe(self, *args):
-        return self._pubsub_unsubscribe("PUNSUBSCRIBE", *args)
+        return self._pubsub_unsubscribe(b"PUNSUBSCRIBE", *args)
 
     @tornado.gen.coroutine
     def _pubsub_unsubscribe(self, command, *args):
