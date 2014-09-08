@@ -7,10 +7,10 @@ def pubsub():
     client = tornadis.Client()
     yield client.connect()
     reply = yield client.call("PSUBSCRIBE", "*")
-    print reply
+    print(reply)
     while True:
         reply = yield client.pop_message()
-        print reply
+        print(reply)
 
 
 def stop_loop(future):
