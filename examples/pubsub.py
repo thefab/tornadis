@@ -6,14 +6,19 @@ import tornadis
 def pubsub():
     client = tornadis.Client()
     yield client.connect()
-    reply = yield client.call("PSUBSCRIBE", "*")
-    print(reply)
+    yield client.pubsub_psubscribe("foo*")
+    yield client.pubsub_subscribe("bar")
     while True:
-        reply = yield client.pop_message()
+        reply = yield client.pubsub_pop_message()
         print(reply)
+        if reply[3] == "STOP":
+            r1 = yield client.pubsub_punsubscribe("foo*")
+            r2 = yield client.pubsub_unsubscribe("bar")
+            break
+    yield client.disconnect()
 
 
-def stop_loop(future):
+def stop_loop(future=None):
     loop = tornado.ioloop.IOLoop.instance()
     loop.stop()
 

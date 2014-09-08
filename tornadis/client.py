@@ -22,6 +22,7 @@ class Client(object):
     def __init__(self, host='localhost', port=6379, ioloop=None):
         self.host = host
         self.port = port
+        self.subscribed = False
         self.__reply_queue = toro.Queue()
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.reader = hiredis.Reader()
@@ -36,10 +37,11 @@ class Client(object):
         self.__connection.register_read_until_close_callback(cb1, cb2)
 
     def disconnect(self):
-        return self.call("QUIT")
+        return self._simple_call("QUIT")
 
     def _disconnect(self):
         self.__connection.disconnect()
+        self.__reply_queue = toro.Queue()
 
     def _close_callback(self, data=None):
         if data is not None:
@@ -57,6 +59,9 @@ class Client(object):
                     break
 
     def call(self, *args):
+        if self.subscribed:
+            raise Exception("This client is in subscription mode, "
+                            "only pubsub_* command are allowed")
         if len(args) == 1 and isinstance(args[0], Pipeline):
             return self._pipelined_call(args[0])
         else:
@@ -69,8 +74,44 @@ class Client(object):
         reply = yield self.__reply_queue.get()
         raise tornado.gen.Return(reply)
 
-    def pop_message(self):
-        return self.__reply_queue.get()
+    def pubsub_subscribe(self, *args):
+        return self._pubsub_subscribe("SUBSCRIBE", *args)
+
+    def pubsub_psubscribe(self, *args):
+        return self._pubsub_subscribe("PSUBSCRIBE", *args)
+
+    @tornado.gen.coroutine
+    def _pubsub_subscribe(self, command, *args):
+        reply = yield self._simple_call(command, *args)
+        if len(reply) != 3 or reply[0].lower() != command.lower() or \
+           reply[2] == 0:
+            raise tornado.gen.Return(False)
+        self.subscribed = True
+        raise tornado.gen.Return(True)
+
+    def pubsub_unsubscribe(self, *args):
+        return self._pubsub_unsubscribe("UNSUBSCRIBE", *args)
+
+    def pubsub_punsubscribe(self, *args):
+        return self._pubsub_unsubscribe("PUNSUBSCRIBE", *args)
+
+    @tornado.gen.coroutine
+    def _pubsub_unsubscribe(self, command, *args):
+        reply = yield self._simple_call(command, *args)
+        if len(reply) != 3 or reply[0].lower() != command.lower():
+            raise tornado.gen.Return(False)
+        if reply[2] == 0:
+            self.subscribed = False
+        raise tornado.gen.Return(True)
+
+    def pubsub_pop_message(self, deadline=None):
+        if not(self.subscribed):
+            raise Exception("you must subcribe before using "
+                            "pubsub_pop_message")
+        try:
+            return self.__reply_queue.get(deadline=deadline)
+        except toro.Timeout:
+            return tornado.gen.maybe_future(None)
 
     @tornado.gen.coroutine
     def _pipelined_call(self, pipeline):
