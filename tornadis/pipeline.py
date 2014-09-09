@@ -18,8 +18,9 @@ class Pipeline(object):
 
     Attributes:
         pipelined_args: A list of tuples, earch tuple is a complete
-            redis command
-        number_of_stacked_calls: the number of stacked redis commands (integer)
+            redis command.
+        number_of_stacked_calls: the number of stacked redis commands
+            (integer).
     """
 
     def __init__(self):
@@ -30,17 +31,16 @@ class Pipeline(object):
     def stack_call(self, *args):
         """Stacks a redis command inside the object.
 
-        The syntax is the same than the call() method a Client class
+        The syntax is the same than the call() method a Client class.
+
+        Args:
+            *args: full redis command as variable length argument list.
 
         Examples:
-
             >>> pipeline = Pipeline()
             >>> pipeline.stack_call("HSET", "key", "field", "value")
             >>> pipeline.stack_call("PING")
             >>> pipeline.stack_call("INCR", "key2")
-
-        Attributes:
-            *args: full redis command as variable length argument list
         """
         self.pipelined_args.append(args)
         self.number_of_stacked_calls = self.number_of_stacked_calls + 1
