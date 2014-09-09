@@ -25,7 +25,7 @@ sdist: clean
 	python setup.py sdist
 
 test:
-	flake8 .
+	flake8 --exclude=docs/* .
 	cd tests && nosetests
 
 coveralls:
