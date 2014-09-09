@@ -29,7 +29,6 @@ test:
 	cd tests && nosetests
 
 coveralls:
-	flake8 .
 	cd tests && nosetests --with-coverage --cover-package=tornadis && ../.coveralls.sh
 
 upload:
