@@ -65,27 +65,61 @@ def format_args_in_redis_protocol(*args):
     return b"\r\n".join(lines)
 
 
-# This class is "stolen" from here:
-# https://github.com/ajdavis/toro/blob/master/toro/__init__.py
-# Original credits to jesse@mongodb.com
-# Modified to be able to return the future result
 class ContextManagerFuture(Future):
     """A Future that can be used with the "with" statement.
+
     When a coroutine yields this Future, the return value is a context manager
+    that can be used like:
+
+        >>> with (yield future) as result:
+                pass
+
+    At the end of the block, the Future's exit callback is run.
+
+    This class is stolen from "toro" source:
+    https://github.com/ajdavis/toro/blob/master/toro/__init__.py
+
+    Original credits to jesse@mongodb.com
+    Modified to be able to return the future result
+
+    Attributes:
+        _exit_callback (callable): the exit callback to call at the end of
+            the block
+        _wrapped (Future): the wrapped future
     """
     def __init__(self, wrapped, exit_callback):
+        """Constructor.
+
+        Args:
+            wrapped (Future): the original Future object (to wrap)
+            exit_callback: the exit callback to call at the end of
+                the block
+        """
         super(ContextManagerFuture, self).__init__()
         wrapped.add_done_callback(self._done_callback)
-        self.exit_callback = exit_callback
-        self.wrapped = wrapped
+        self._exit_callback = exit_callback
+        self._wrapped = wrapped
 
     def _done_callback(self, wrapped):
+        """Internal "done callback" to set the result of the object.
+
+        The result of the object if forced by the wrapped future. So this
+        internal callback must be called when the wrapped future is ready.
+
+        Args:
+            wrapped (Future): the wrapped Future object
+        """
         if wrapped.exception():
             self.set_exception(wrapped.exception())
         else:
             self.set_result(wrapped.result())
 
     def result(self):
+        """The result method which returns a context manager
+
+        Returns:
+            ContextManager: The corresponding context manager
+        """
         if self.exception():
             raise self.exception()
         # Otherwise return a context manager that cleans up after the block.
@@ -93,7 +127,7 @@ class ContextManagerFuture(Future):
         @contextlib.contextmanager
         def f():
             try:
-                yield self.wrapped.result()
+                yield self._wrapped.result()
             finally:
-                self.exit_callback()
+                self._exit_callback()
         return f()
