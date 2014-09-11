@@ -11,6 +11,26 @@ import contextlib
 
 
 def format_args_in_redis_protocol(*args):
+    """Formats arguments into redis protocol...
+
+    This function makes and returns a string/buffer corresponding to
+    given arguments formated with the redis protocol.
+
+    integer, text, string or binary types are automatically converted
+    (using utf8 if necessary).
+
+    More informations about the protocol: http://redis.io/topics/protocol
+
+    Args:
+        *args: full redis command as variable length argument list
+
+    Returns:
+        binary string (arguments in redis protocol)
+
+    Examples:
+        >>> format_args_in_redis_protocol("HSET", "key", "field", "value")
+        '*4\r\n$4\r\nHSET\r\n$3\r\nkey\r\n$5\r\nfield\r\n$5\r\nvalue\r\n'
+    """
     l = "*%d" % len(args)
     if six.PY2:
         lines = [l]
