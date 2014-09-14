@@ -16,6 +16,9 @@ Contents:
  .. autoclass:: Pipeline
      :members:
 
+ .. autoclass:: Client
+     :members:
+
 
 Indices and tables
 ==================

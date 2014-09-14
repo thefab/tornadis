@@ -13,18 +13,18 @@ class Connection(object):
     """Low level connection object.
 
     Attributes:
-        host (string): the host name to connect to
-        port (int): the port to connect to
-        connected (boolean): is the connection object really connected
+        host (string): the host name to connect to.
+        port (int): the port to connect to.
+        connected (boolean): is the connection object really connected.
     """
 
     def __init__(self, host='localhost', port=6379, ioloop=None):
         """Constructor.
 
         Args:
-            host (string): the host name to connect to
-            port (int): the port to connect to
-            ioloop (IOLoop): the tornado ioloop to use
+            host (string): the host name to connect to.
+            port (int): the port to connect to.
+            ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
         self.port = port
@@ -37,7 +37,7 @@ class Connection(object):
         """Connects the object to the host:port.
 
         Returns:
-            Future: a Future object
+            Future: a Future object with no specific result.
         """
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__stream = tornado.iostream.IOStream(self.__socket,
@@ -59,13 +59,15 @@ class Connection(object):
 
         Returns:
             Future: a Future object "resolved" when the data is written
-                on the socket
+                on the socket (no specific result)
         """
         return self.__stream.write(data)
 
     def register_read_until_close_callback(self, callback=None,
                                            streaming_callback=None):
         """Registers a callback called when data are available on the socket.
+
+        The callback is called with the data as argument.
 
         Args:
             callback (callable): callback to call when the connection is

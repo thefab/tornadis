@@ -18,41 +18,85 @@ from tornadis.utils import format_args_in_redis_protocol
 
 
 class Client(object):
+    """High level object to interact with redis.
+
+    Attributes:
+        host (string): the host name to connect to.
+        port (int): the port to connect to.
+        subscribed (boolean): is the client object subscribed to redis
+            (with pubsub methods).
+        __reply_queue (toro.Queue): toro queue to put redis replies.
+        __reader: hiredis reader object.
+        __connection: tornadis low level Connection object.
+    """
 
     def __init__(self, host='localhost', port=6379, ioloop=None):
+        """Constructor.
+
+        Args:
+            host (string): the host name to connect to.
+            port (int): the port to connect to.
+            ioloop (IOLoop): the tornado ioloop to use.
+        """
         self.host = host
         self.port = port
         self.subscribed = False
         self.__reply_queue = toro.Queue()
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
-        self.reader = hiredis.Reader()
+        self.__reader = hiredis.Reader()
         self.__connection = Connection(host=host, port=port,
                                        ioloop=self.__ioloop)
 
     @tornado.gen.coroutine
     def connect(self):
+        """Connects the client object to redis.
+
+        Returns:
+            a Future object with no result.
+        """
         yield self.__connection.connect()
         cb1 = self._close_callback
         cb2 = self._read_callback
         self.__connection.register_read_until_close_callback(cb1, cb2)
 
     def disconnect(self):
+        """Disconnects the client object from redis.
+
+        Returns:
+            a Future object with no result.
+        """
         return self._simple_call("QUIT")
 
-    def _disconnect(self):
+    def _reinit(self):
+        """ Reinit the object.
+        """
         self.__connection.disconnect()
         self.__reply_queue = toro.Queue()
 
     def _close_callback(self, data=None):
+        """Callback called when redis closed the connection.
+
+        Args:
+            data (str): string (buffer) read on the socket just before redis
+                closed the connection.
+        """
         if data is not None:
             self._read_callback(data)
-        self._disconnect()
+        self._reinit()
 
     def _read_callback(self, data=None):
+        """Callback called when some data are read on the socket.
+
+        The buffer is given to the hiredis parser. If a reply is complete,
+        we put the decoded reply to on the reply queue.
+
+        Args:
+            data (str): string (buffer) read on the socket.
+        """
         if data is not None:
-            self.reader.feed(data)
+            self.__reader.feed(data)
             while True:
-                reply = self.reader.gets()
+                reply = self.__reader.gets()
                 if reply is not False:
                     self.__reply_queue.put_nowait(reply)
                 else:
