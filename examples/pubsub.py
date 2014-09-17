@@ -19,6 +19,9 @@ def pubsub():
 
 
 def stop_loop(future=None):
+    excep = future.exception()
+    if excep is not None:
+        raise(excep)
     loop = tornado.ioloop.IOLoop.instance()
     loop.stop()
 

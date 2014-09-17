@@ -19,6 +19,9 @@ def multiple_ping_redis(pool):
 
 
 def stop_loop(future):
+    excep = future.exception()
+    if excep is not None:
+        raise(excep)
     loop = tornado.ioloop.IOLoop.instance()
     loop.stop()
 
