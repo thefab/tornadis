@@ -13,6 +13,7 @@ import io
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol
+from tornadis.utils import StopObject
 
 # FIXME: error handling
 
@@ -82,6 +83,8 @@ class Client(object):
         """
         if data is not None:
             self._read_callback(data)
+        if self.subscribed:
+            self.__reply_queue.put_nowait(StopObject())
         self._reinit()
 
     def _read_callback(self, data=None):
@@ -115,7 +118,7 @@ class Client(object):
     def _simple_call(self, *args):
         msg = format_args_in_redis_protocol(*args)
         yield self.__connection.write(msg)
-        reply = yield self.__reply_queue.get()
+        reply = yield self._reply_queue_get()
         raise tornado.gen.Return(reply)
 
     def _simple_call_without_pop_reply(self, *args):
@@ -132,8 +135,7 @@ class Client(object):
     def _pubsub_subscribe(self, command, *args):
         yield self._simple_call_without_pop_reply(command, *args)
         for _ in args:
-            reply = yield self.__reply_queue.get()
-            print(reply)
+            reply = yield self._reply_queue_get()
             if len(reply) != 3 or reply[0].lower() != command.lower() or \
                reply[2] == 0:
                 raise tornado.gen.Return(False)
@@ -151,7 +153,7 @@ class Client(object):
         yield self._simple_call_without_pop_reply(command, *args)
         reply = None
         for _ in args:
-            reply = yield self.__reply_queue.get()
+            reply = yield self._reply_queue_get()
             if reply is None or len(reply) != 3 or \
                reply[0].lower() != command.lower():
                 raise tornado.gen.Return(False)
@@ -165,9 +167,18 @@ class Client(object):
             raise Exception("you must subcribe before using "
                             "pubsub_pop_message")
         try:
-            reply = yield self.__reply_queue.get(deadline=deadline)
+            reply = yield self._reply_queue_get(deadline=deadline)
+            if isinstance(reply, StopObject):
+                raise Exception("connection to redis closed")
         except toro.Timeout:
             reply = None
+        raise tornado.gen.Return(reply)
+
+    @tornado.gen.coroutine
+    def _reply_queue_get(self, deadline=None):
+        reply = yield self.__reply_queue.get(deadline=deadline)
+        if isinstance(reply, StopObject):
+            raise Exception("connection to redis closed")
         raise tornado.gen.Return(reply)
 
     @tornado.gen.coroutine
@@ -180,6 +191,6 @@ class Client(object):
         buf.close()
         result = []
         while len(result) < pipeline.number_of_stacked_calls:
-            reply = yield self.__reply_queue.get()
+            reply = yield self._reply_queue_get()
             result.append(reply)
         raise tornado.gen.Return(result)
