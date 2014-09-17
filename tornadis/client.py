@@ -42,11 +42,7 @@ class Client(object):
         self.host = host
         self.port = port
         self.subscribed = False
-        self.__reply_queue = toro.Queue()
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
-        self.__reader = hiredis.Reader()
-        self.__connection = Connection(host=host, port=port,
-                                       ioloop=self.__ioloop)
 
     @tornado.gen.coroutine
     def connect(self):
@@ -55,9 +51,13 @@ class Client(object):
         Returns:
             a Future object with no result.
         """
-        yield self.__connection.connect()
         cb1 = self._close_callback
         cb2 = self._read_callback
+        self.__reply_queue = toro.Queue()
+        self.__reader = hiredis.Reader()
+        self.__connection = Connection(host=self.host, port=self.port,
+                                       ioloop=self.__ioloop)
+        yield self.__connection.connect()
         self.__connection.register_read_until_close_callback(cb1, cb2)
 
     def disconnect(self):
@@ -68,12 +68,6 @@ class Client(object):
         """
         return self._simple_call("QUIT")
 
-    def _reinit(self):
-        """ Reinit the object.
-        """
-        self.__connection.disconnect()
-        self.__reply_queue = toro.Queue()
-
     def _close_callback(self, data=None):
         """Callback called when redis closed the connection.
 
@@ -83,9 +77,8 @@ class Client(object):
         """
         if data is not None:
             self._read_callback(data)
-        if self.subscribed:
-            self.__reply_queue.put_nowait(StopObject())
-        self._reinit()
+        self.__reply_queue.put_nowait(StopObject())
+        self.__connection.disconnect()
 
     def _read_callback(self, data=None):
         """Callback called when some data are read on the socket.
