@@ -16,22 +16,41 @@ from tornadis.utils import ContextManagerFuture
 
 
 class ClientPool(object):
+    """High level object to deal with a pool of redis clients
 
-    max_size = None
-    client_kwargs = None
-    read_callback = None
-    __sem = None
-    __pool = None
+    Attributes:
+        client_kwargs (dict): Client constructor arguments
+        __sem (toro.Semaphore): Semaphore object to deal with pool limits
+            (only when max_size != -1)
+        __pool (deque): double-ended queue which contains pooled client objets
+    """
 
-    def __init__(self, max_size=-1, **kwargs):
+    def __init__(self, max_size=-1, **client_kwargs):
+        """Constructor.
+
+        Args:
+            max_size (int): max size of the pool (-1 means "no limit")
+                (dict): Client constructor arguments
+            client_kwargs (dict): Client constructor arguments
+        """
         self.max_size = max_size
-        self.client_kwargs = kwargs
+        self.client_kwargs = client_kwargs
         self.__pool = deque()
         if self.max_size != -1:
             self.__sem = toro.Semaphore(self.max_size)
+        else:
+            self.__sem = None
 
     @tornado.gen.coroutine
     def get_connected_client(self):
+        """Gets a connected Client object.
+
+        If max_size is reached, this method will block until a new client
+        object is available.
+
+        Returns:
+            A Future object with connected Client instance as a result.
+        """
         if self.__sem is not None:
             yield self.__sem.acquire()
         try:
@@ -51,11 +70,17 @@ class ClientPool(object):
         self.release_client(client)
 
     def release_client(self, client):
+        """Releases a client object to the pool.
+
+        Args:
+            client: Client object
+        """
         self.__pool.append(client)
         if self.__sem is not None:
             self.__sem.release()
 
     def destroy(self):
+        """Disconnects all pooled client objects."""
         while True:
             try:
                 client = self.__pool.popleft()
@@ -64,6 +89,7 @@ class ClientPool(object):
                 break
 
     def _make_client(self):
+        """Makes and returns a Client object."""
         kwargs = self.client_kwargs
         client = Client(**kwargs)
         return client
