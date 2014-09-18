@@ -6,6 +6,7 @@ import tornado.ioloop
 import toro
 
 from tornadis.connection import Connection
+from tornadis.exceptions import ConnectionError
 from tornadis.utils import format_args_in_redis_protocol
 from support import test_redis_or_raise_skiptest
 
@@ -41,4 +42,15 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         yield c.write(data1)
         yield c.write(data2)
         yield self._test_write_condition.wait()
+        c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_bad_connect(self):
+        c = Connection(host="bad_host__")
+        try:
+            yield c.connect()
+        except ConnectionError:
+            pass
+        else:
+            raise("ConnectionError must be raised")
         c.disconnect()

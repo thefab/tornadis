@@ -7,6 +7,7 @@
 import socket
 import tornado.iostream
 import tornado.gen
+from tornadis.exceptions import ConnectionError
 
 
 class Connection(object):
@@ -42,7 +43,11 @@ class Connection(object):
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__stream = tornado.iostream.IOStream(self.__socket,
                                                   io_loop=self.__ioloop)
-        yield self.__stream.connect((self.host, self.port))
+        future = self.__stream.connect((self.host, self.port))
+        if future is None:
+            raise ConnectionError("can't connect to %s:%i" % (self.host,
+                                                              self.port))
+        yield future
         self.connected = True
 
     def disconnect(self):

@@ -12,8 +12,8 @@ import io
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
-from tornadis.utils import format_args_in_redis_protocol
-from tornadis.utils import StopObject
+from tornadis.utils import format_args_in_redis_protocol, StopObject
+from tornadis.exceptions import ConnectionError, ClientError
 
 # FIXME: error handling
 
@@ -115,8 +115,8 @@ class Client(object):
                     result = yield client.call("HSET", "key", "field", "value")
         """
         if self.subscribed:
-            raise Exception("This client is in subscription mode, "
-                            "only pubsub_* command are allowed")
+            raise ClientError("This client is in subscription mode, "
+                              "only pubsub_* command are allowed")
         if len(args) == 1 and isinstance(args[0], Pipeline):
             return self._pipelined_call(args[0])
         else:
@@ -172,12 +172,10 @@ class Client(object):
     @tornado.gen.coroutine
     def pubsub_pop_message(self, deadline=None):
         if not self.subscribed:
-            raise Exception("you must subcribe before using "
-                            "pubsub_pop_message")
+            raise ClientError("you must subcribe before using "
+                              "pubsub_pop_message")
         try:
             reply = yield self._reply_queue_get(deadline=deadline)
-            if isinstance(reply, StopObject):
-                raise Exception("connection to redis closed")
         except toro.Timeout:
             reply = None
         raise tornado.gen.Return(reply)
@@ -186,7 +184,7 @@ class Client(object):
     def _reply_queue_get(self, deadline=None):
         reply = yield self.__reply_queue.get(deadline=deadline)
         if isinstance(reply, StopObject):
-            raise Exception("connection to redis closed")
+            raise ConnectionError("connection to redis closed by the server")
         raise tornado.gen.Return(reply)
 
     @tornado.gen.coroutine
