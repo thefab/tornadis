@@ -11,6 +11,7 @@ clean:
 	cd tests && rm -f *.pyc
 	cd tornadis && rm -f *.pyc
 	cd tests && rm -Rf htmlcov 
+	cd docs && make clean
 	rm -f .coverage tests/.coverage
 	rm -f MANIFEST
 	rm -Rf build
@@ -23,6 +24,9 @@ clean:
 
 sdist: clean
 	python setup.py sdist
+
+doc:
+	cd docs && make html
 
 test:
 	flake8 --exclude=docs/* .
