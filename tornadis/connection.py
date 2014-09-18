@@ -47,7 +47,11 @@ class Connection(object):
         if future is None:
             raise ConnectionError("can't connect to %s:%i" % (self.host,
                                                               self.port))
-        yield future
+        try:
+            yield future
+        except:
+            raise ConnectionError("can't connect to %s:%i" % (self.host,
+                                                              self.port))
         self.connected = True
 
     def disconnect(self):
