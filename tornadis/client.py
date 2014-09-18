@@ -99,6 +99,21 @@ class Client(object):
                     break
 
     def call(self, *args):
+        """Calls a redis command and waits for the reply
+
+        Args:
+            *args: full redis command as variable length argument list
+
+        Returns:
+            a Future with the decoded redis reply as result
+
+        Examples:
+
+            >>> @tornado.gen.coroutine
+                def foobar():
+                    client = Client()
+                    result = yield client.call("HSET", "key", "field", "value")
+        """
         if self.subscribed:
             raise Exception("This client is in subscription mode, "
                             "only pubsub_* command are allowed")
