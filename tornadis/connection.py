@@ -8,6 +8,7 @@ import socket
 import tornado.iostream
 import tornado.gen
 from tornadis.exceptions import ConnectionError
+import tornadis
 
 
 class Connection(object):
@@ -20,7 +21,8 @@ class Connection(object):
         connected (boolean): is the connection object really connected.
     """
 
-    def __init__(self, host='localhost', port=6379, connect_timeout=20,
+    def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
+                 connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
                  ioloop=None):
         """Constructor.
 

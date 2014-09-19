@@ -7,6 +7,10 @@
 version_info = (0, 0, '1')
 __version__ = ".".join([str(x) for x in version_info])
 
+DEFAULT_HOST = '127.0.0.1'
+DEFAULT_PORT = 6379
+DEFAULT_CONNECT_TIMEOUT = 20
+
 from tornadis.client import Client
 from tornadis.pool import ClientPool
 from tornadis.pipeline import Pipeline

@@ -14,6 +14,7 @@ from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol, StopObject
 from tornadis.exceptions import ConnectionError, ClientError
+import tornadis
 
 # FIXME: error handling
 
@@ -32,7 +33,8 @@ class Client(object):
         __connection: tornadis low level Connection object.
     """
 
-    def __init__(self, host='localhost', port=6379, connect_timeout=20,
+    def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
+                 connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
                  ioloop=None):
         """Constructor.
 
