@@ -26,6 +26,9 @@ class Client(object):
         host (string): the host name to connect to.
         port (int): the port to connect to.
         connect_timeout (int): connect timeout (seconds)
+        write_timeout (int): write timeout (seconds)
+        read_timeout (int): read timeout (seconds) (not used with
+            pubsub_pop_message() which has a specific deadline parameter)
         subscribed (boolean): is the client object subscribed to redis
             (with pubsub methods).
         __reply_queue (toro.Queue): toro queue to put redis replies.
@@ -35,6 +38,8 @@ class Client(object):
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
+                 write_timeout=tornadis.DEFAULT_WRITE_TIMEOUT,
+                 read_timeout=tornadis.DEFAULT_READ_TIMEOUT,
                  ioloop=None):
         """Constructor.
 
@@ -42,11 +47,15 @@ class Client(object):
             host (string): the host name to connect to.
             port (int): the port to connect to.
             connect_timeout (int): connect timeout (seconds)
+            write_timeout (int): write timeout (seconds)
+            read_timeout (int): read timeout (seconds)
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
         self.port = port
         self.connect_timeout = connect_timeout
+        self.write_timeout = write_timeout
+        self.read_timeout = read_timeout
         self.subscribed = False
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
@@ -73,6 +82,7 @@ class Client(object):
         self.__reader = hiredis.Reader()
         self.__connection = Connection(host=self.host, port=self.port,
                                        connect_timeout=self.connect_timeout,
+                                       write_timeout=self.write_timeout,
                                        ioloop=self.__ioloop)
         yield self.__connection.connect()
         self.__connection.register_read_until_close_callback(cb1, cb2)
@@ -192,16 +202,22 @@ class Client(object):
             raise ClientError("you must subcribe before using "
                               "pubsub_pop_message")
         try:
-            reply = yield self._reply_queue_get(deadline=deadline)
+            pop = self._reply_queue_get
+            reply = yield pop(deadline=deadline,
+                              raise_exception_for_timeout=False)
         except toro.Timeout:
             reply = None
         raise tornado.gen.Return(reply)
 
     @tornado.gen.coroutine
-    def _reply_queue_get(self, deadline=None):
+    def _reply_queue_get(self, deadline=None,
+                         raise_exception_for_timeout=True):
         reply = yield self.__reply_queue.get(deadline=deadline)
         if isinstance(reply, StopObject):
             raise ConnectionError("connection to redis closed by the server")
+        if raise_exception_for_timeout and reply is None:
+            self.__connection.disconnect()
+            raise ConnectionError("read timeout")
         raise tornado.gen.Return(reply)
 
     @tornado.gen.coroutine
