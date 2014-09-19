@@ -39,14 +39,14 @@ class Connection(object):
 
         Returns:
             Future: a Future object with no specific result.
+
+        Raises:
+            ConnectionError: when there is a connection error
         """
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__stream = tornado.iostream.IOStream(self.__socket,
                                                   io_loop=self.__ioloop)
         future = self.__stream.connect((self.host, self.port))
-        if future is None:
-            raise ConnectionError("can't connect to %s:%i" % (self.host,
-                                                              self.port))
         try:
             yield future
         except:
@@ -60,6 +60,7 @@ class Connection(object):
         self.__stream.close()
         self.connected = False
 
+    @tornado.gen.coroutine
     def write(self, data):
         """Writes some data to the host:port
 
@@ -69,8 +70,16 @@ class Connection(object):
         Returns:
             Future: a Future object "resolved" when the data is written
                 on the socket (no specific result)
+
+        Raises:
+            ConnectionError: when there is a connection error
         """
-        return self.__stream.write(data)
+        try:
+            result = yield self.__stream.write(data)
+        except:
+            self.connected = False
+            raise ConnectionError("can't write to socket")
+        raise tornado.gen.Return(result)
 
     def register_read_until_close_callback(self, callback=None,
                                            streaming_callback=None):

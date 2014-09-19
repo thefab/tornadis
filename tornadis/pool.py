@@ -53,8 +53,12 @@ class ClientPool(object):
         """
         if self.__sem is not None:
             yield self.__sem.acquire()
+        client = None
         try:
-            client = self.__pool.popleft()
+            while True:
+                client = self.__pool.popleft()
+                if client.is_connected():
+                    break
         except IndexError:
             client = self._make_client()
             yield client.connect()

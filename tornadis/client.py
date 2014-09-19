@@ -43,6 +43,16 @@ class Client(object):
         self.port = port
         self.subscribed = False
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
+        self.__connection = None
+
+    def is_connected(self):
+        """Returns True is the client is connected to redis.
+
+        Returns:
+            True if the client if connected to redis.
+        """
+        return (self.__connection is not None) and \
+               (self.__connection.connected)
 
     @tornado.gen.coroutine
     def connect(self):
