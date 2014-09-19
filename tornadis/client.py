@@ -24,6 +24,7 @@ class Client(object):
     Attributes:
         host (string): the host name to connect to.
         port (int): the port to connect to.
+        connect_timeout (int): connect timeout (seconds)
         subscribed (boolean): is the client object subscribed to redis
             (with pubsub methods).
         __reply_queue (toro.Queue): toro queue to put redis replies.
@@ -31,16 +32,19 @@ class Client(object):
         __connection: tornadis low level Connection object.
     """
 
-    def __init__(self, host='localhost', port=6379, ioloop=None):
+    def __init__(self, host='localhost', port=6379, connect_timeout=20,
+                 ioloop=None):
         """Constructor.
 
         Args:
             host (string): the host name to connect to.
             port (int): the port to connect to.
+            connect_timeout (int): connect timeout (seconds)
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
         self.port = port
+        self.connect_timeout = connect_timeout
         self.subscribed = False
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
@@ -66,6 +70,7 @@ class Client(object):
         self.__reply_queue = toro.Queue()
         self.__reader = hiredis.Reader()
         self.__connection = Connection(host=self.host, port=self.port,
+                                       connect_timeout=self.connect_timeout,
                                        ioloop=self.__ioloop)
         yield self.__connection.connect()
         self.__connection.register_read_until_close_callback(cb1, cb2)
