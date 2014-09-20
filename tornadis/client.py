@@ -75,7 +75,13 @@ class Client(object):
 
         Returns:
             a Future object with no result.
+
+        Raises:
+            ConnectionError: when there is a connection error
+            ClientError: when you are already connected
         """
+        if self.is_connected():
+            raise ClientError("you are already connected")
         cb1 = self._close_callback
         cb2 = self._read_callback
         self.__reply_queue = toro.Queue()
@@ -90,10 +96,18 @@ class Client(object):
     def disconnect(self):
         """Disconnects the client object from redis.
 
+        It's safe to use this method even if you are already disconnected.
+
         Returns:
             a Future object with no result.
         """
-        return self._simple_call("QUIT")
+        if not self.is_connected():
+            return
+        try:
+            return self._simple_call("QUIT")
+        except ConnectionError:
+            if self.__connection is not None:
+                self.__connection.disconnect()
 
     def _close_callback(self, data=None):
         """Callback called when redis closed the connection.
@@ -134,6 +148,10 @@ class Client(object):
         Returns:
             a Future with the decoded redis reply as result
 
+        Raises:
+            ClientError: you are not connected ou you are in pubsub mode
+            ConnectionError: there is a connection error
+
         Examples:
 
             >>> @tornado.gen.coroutine
@@ -141,6 +159,8 @@ class Client(object):
                     client = Client()
                     result = yield client.call("HSET", "key", "field", "value")
         """
+        if not self.is_connected():
+            raise ClientError("you are not connected")
         if self.subscribed:
             raise ClientError("This client is in subscription mode, "
                               "only pubsub_* command are allowed")
@@ -161,9 +181,47 @@ class Client(object):
         return self.__connection.write(msg)
 
     def pubsub_subscribe(self, *args):
+        """Subscribes to a list of channels.
+
+        http://redis.io/topics/pubsub
+
+        Args:
+            *args: variable list of channels to subscribe.
+
+        Returns:
+            Future: Future with True as result if the subscription is ok.
+
+        Raises:
+            ConnectionError: there is a connection error.
+            ClientError: you are not connected.
+
+        Examples:
+
+            >>> yield client.pubsub_subscribe("channel1", "channel2")
+        """
+        if not self.is_connected():
+            raise ClientError("you are not connected")
         return self._pubsub_subscribe(b"SUBSCRIBE", *args)
 
     def pubsub_psubscribe(self, *args):
+        """Subscribes to a list of patterns.
+
+        http://redis.io/topics/pubsub
+
+        Args:
+            *args: variable list of pattenrs to subscribe.
+
+        Returns:
+            Future: Future with True as result if the subscription is ok.
+
+        Raises:
+            ConnectionError: there is a connection error.
+            ClientError: you are not connected.
+
+        Examples:
+
+            >>> yield client.pubsub_psubscribe("channel*", "foo*")
+        """
         return self._pubsub_subscribe(b"PSUBSCRIBE", *args)
 
     @tornado.gen.coroutine

@@ -19,6 +19,11 @@ Contents:
  .. autoclass:: Client
      :members:
 
+.. automodule:: tornadis.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Indices and tables
 ==================

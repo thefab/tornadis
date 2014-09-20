@@ -68,11 +68,11 @@ class Connection(object):
         self.connected = True
 
     def _timeout_callback(self):
+        """Internal callback called after a connect/write timeout."""
         self.disconnect()
 
     def disconnect(self):
-        """Disconnects the object.
-        """
+        """Disconnects the object."""
         self.__stream.close()
         self.connected = False
 
