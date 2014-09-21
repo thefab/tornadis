@@ -162,7 +162,7 @@ class Client(object):
         if not self.is_connected():
             raise ClientError("you are not connected")
         if self.subscribed:
-            raise ClientError("This client is in subscription mode, "
+            raise ClientError("This client is in pubsub mode, "
                               "only pubsub_* command are allowed")
         if len(args) == 1 and isinstance(args[0], Pipeline):
             return self._pipelined_call(args[0])
@@ -189,7 +189,7 @@ class Client(object):
             *args: variable list of channels to subscribe.
 
         Returns:
-            Future: Future with True as result if the subscription is ok.
+            Future: Future with True as result if the subscribe is ok.
 
         Raises:
             ConnectionError: there is a connection error.
@@ -209,10 +209,10 @@ class Client(object):
         http://redis.io/topics/pubsub
 
         Args:
-            *args: variable list of pattenrs to subscribe.
+            *args: variable list of patterns to subscribe.
 
         Returns:
-            Future: Future with True as result if the subscription is ok.
+            Future: Future with True as result if the subscribe is ok.
 
         Raises:
             ConnectionError: there is a connection error.
@@ -236,9 +236,46 @@ class Client(object):
         raise tornado.gen.Return(True)
 
     def pubsub_unsubscribe(self, *args):
+        """Unsubscribes from a list of channels.
+
+        http://redis.io/topics/pubsub
+
+        Args:
+            *args: variable list of channels to unsubscribe.
+
+        Returns:
+            Future: Future with True as result if the unsubscribe is ok.
+
+        Raises:
+            ConnectionError: there is a connection error.
+            ClientError: you are not connected.
+
+        Examples:
+
+            >>> yield client.pubsub_unsubscribe("channel1", "channel2")
+        """
         return self._pubsub_unsubscribe(b"UNSUBSCRIBE", *args)
 
     def pubsub_punsubscribe(self, *args):
+        """Unsubscribes from a list of patterns.
+
+        http://redis.io/topics/pubsub
+
+        Args:
+            *args: variable list of patterns to unsubscribe.
+
+        Returns:
+            Future: Future with True as result if the unsubscribe is ok.
+
+        Raises:
+            ConnectionError: there is a connection error.
+            ClientError: you are not connected.
+
+        Examples:
+
+            >>> yield client.pubsub_punsubscribe("channel*", "foo*")
+
+        """
         return self._pubsub_unsubscribe(b"PUNSUBSCRIBE", *args)
 
     @tornado.gen.coroutine
@@ -256,8 +293,20 @@ class Client(object):
 
     @tornado.gen.coroutine
     def pubsub_pop_message(self, deadline=None):
+        """Pops a message for a subscribed client.
+
+        Args:
+            deadline (int): max number of seconds to wait (None => no timeout)
+
+        Returns:
+            Future with the popped message as result (or None if timeout)
+
+        Raises:
+            ConnectionError: when there is a connection error
+            ClientError: when you are not subscribed to anything
+        """
         if not self.subscribed:
-            raise ClientError("you must subcribe before using "
+            raise ClientError("you must subscribe before using "
                               "pubsub_pop_message")
         try:
             pop = self._reply_queue_get
