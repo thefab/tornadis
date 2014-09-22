@@ -13,16 +13,26 @@ Contents:
 
 .. automodule:: tornadis
  
- .. autoclass:: Pipeline
-     :members:
-
  .. autoclass:: Client
      :members:
 
-.. automodule:: tornadis.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
+ .. autoclass:: Pipeline
+     :members:
+
+ .. autoclass:: ClientPool
+     :members:
+
+ .. autoclass:: TornadisException
+     :members:
+     :show-inheritance:
+
+ .. autoclass:: ConnectionError
+     :members:
+     :show-inheritance:
+
+ .. autoclass:: ClientError
+     :members:
+     :show-inheritance:
 
 
 Indices and tables
