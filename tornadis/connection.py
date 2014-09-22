@@ -56,6 +56,7 @@ class Connection(object):
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__stream = tornado.iostream.IOStream(self.__socket,
                                                   io_loop=self.__ioloop)
+        self.__stream.set_nodelay(True)
         cb = self._timeout_callback
         handle = self.__ioloop.call_later(self.connect_timeout, cb)
         try:
