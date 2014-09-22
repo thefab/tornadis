@@ -322,7 +322,8 @@ class Client(object):
         reply = yield self.__reply_queue.get(deadline=deadline)
         if isinstance(reply, StopObject):
             raise ConnectionError("connection to redis closed by the server")
-        if raise_exception_for_timeout and reply is None:
+        if raise_exception_for_timeout and reply is None and \
+           deadline is not None:
             self.__connection.disconnect()
             raise ConnectionError("read timeout")
         raise tornado.gen.Return(reply)
