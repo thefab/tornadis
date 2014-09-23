@@ -139,11 +139,23 @@ class Client(object):
                 else:
                     break
 
-    def call(self, *args):
+    def call(self, *args, **kwargs):
         """Calls a redis command and waits for the reply
+
+        Following options are available (not part of the redis command itself):
+
+        - callback: function called (with the result as argument) when the
+            future resolves (standard behavior of the tornado.gen.coroutine
+            decorator => do not yield the returned Future when you use a
+            callback argument)
+        - discard_reply: if True (default False), don't wait for completion
+            and discard the reply (when it becomes available) => do not
+            yield the returned Future and don't use together with callback
+            option
 
         Args:
             *args: full redis command as variable length argument list
+            **kwargs: options as keyword parameters
 
         Returns:
             a Future with the decoded redis reply as result
@@ -157,17 +169,28 @@ class Client(object):
             >>> @tornado.gen.coroutine
                 def foobar():
                     client = Client()
-                    result = yield client.call("HSET", "key", "field", "value")
+                    result = yield client.call("HSET", "key", "field", "val")
+
+            >>> client.call("HSET", "key", "field", "val", discard_reply=True)
         """
         if not self.is_connected():
             raise ClientError("you are not connected")
         if self.subscribed:
             raise ClientError("This client is in pubsub mode, "
                               "only pubsub_* command are allowed")
+        if 'discard_reply' in kwargs:
+            if 'callback' in kwargs:
+                raise ClientError("Don't use callback and "
+                                  "discard_reply together")
+            kwargs['callback'] = self._discard_reply
+            kwargs.pop('discard_reply')
         if len(args) == 1 and isinstance(args[0], Pipeline):
-            return self._pipelined_call(args[0])
+            return self._pipelined_call(args[0], **kwargs)
         else:
-            return self._simple_call(*args)
+            return self._simple_call(*args, **kwargs)
+
+    def _discard_reply(reply):
+        pass
 
     @tornado.gen.coroutine
     def _simple_call(self, *args):
