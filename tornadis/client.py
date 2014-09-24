@@ -189,7 +189,7 @@ class Client(object):
         else:
             return self._simple_call(*args, **kwargs)
 
-    def _discard_reply(reply):
+    def _discard_reply(self, reply):
         pass
 
     @tornado.gen.coroutine
