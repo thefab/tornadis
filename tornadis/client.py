@@ -195,13 +195,13 @@ class Client(object):
     @tornado.gen.coroutine
     def _simple_call(self, *args):
         msg = format_args_in_redis_protocol(*args)
-        yield self.__connection.write(msg)
+        self.__connection.write(msg)
         reply = yield self._reply_queue_get()
         raise tornado.gen.Return(reply)
 
     def _simple_call_without_pop_reply(self, *args):
         msg = format_args_in_redis_protocol(*args)
-        return self.__connection.write(msg)
+        self.__connection.write(msg)
 
     def pubsub_subscribe(self, *args):
         """Subscribes to a list of channels.
@@ -249,7 +249,7 @@ class Client(object):
 
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
-        yield self._simple_call_without_pop_reply(command, *args)
+        self._simple_call_without_pop_reply(command, *args)
         for _ in args:
             reply = yield self._reply_queue_get()
             if len(reply) != 3 or reply[0].lower() != command.lower() or \
@@ -303,7 +303,7 @@ class Client(object):
 
     @tornado.gen.coroutine
     def _pubsub_unsubscribe(self, command, *args):
-        yield self._simple_call_without_pop_reply(command, *args)
+        self._simple_call_without_pop_reply(command, *args)
         reply = None
         for _ in args:
             reply = yield self._reply_queue_get()
@@ -357,7 +357,7 @@ class Client(object):
         for args in pipeline.pipelined_args:
             msg = format_args_in_redis_protocol(*args)
             buf.write(msg)
-        yield self.__connection.write(buf.getvalue())
+        self.__connection.write(buf.getvalue())
         buf.close()
         result = []
         while len(result) < pipeline.number_of_stacked_calls:

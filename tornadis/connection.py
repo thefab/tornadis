@@ -9,6 +9,7 @@ import tornado.iostream
 import tornado.gen
 from tornadis.exceptions import ConnectionError
 import tornadis
+import functools
 
 
 class Connection(object):
@@ -78,15 +79,21 @@ class Connection(object):
         self.connected = False
 
     @tornado.gen.coroutine
-    def write(self, data):
+    def write(self, data, wait=False):
         """Writes some data to the host:port
 
         Args:
             data (str): string (buffer) to write to the host:port
+            wait (boolean): if True, returns a Future object "resolved"
+                when the data is written on the socket (no specific result)
 
         Returns:
-            Future: a Future object "resolved" when the data is written
+            Future: a Future object "resolved":
+
+                (if wait=True) when the data is written
                 on the socket (no specific result)
+
+                (if wait=False) immediatly
 
         Raises:
             ConnectionError: when there is a connection error
@@ -96,13 +103,20 @@ class Connection(object):
         cb = self._timeout_callback
         handle = self.__ioloop.call_later(self.write_timeout, cb)
         try:
-            result = yield self.__stream.write(data)
+            if wait:
+                yield self.__stream.write(data)
+            else:
+                cb = functools.partial(self._write_callback, handle)
+                self.__stream.write(data, callback=cb)
         except:
             self.__ioloop.remove_timeout(handle)
             self.disconnect()
             raise ConnectionError("can't write to socket")
+        if wait:
+            self.__ioloop.remove_timeout(handle)
+
+    def _write_callback(self, handle):
         self.__ioloop.remove_timeout(handle)
-        raise tornado.gen.Return(result)
 
     def register_read_until_close_callback(self, callback=None,
                                            streaming_callback=None):
