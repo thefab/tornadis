@@ -8,6 +8,98 @@
 import six
 from tornado.concurrent import Future
 import contextlib
+import collections
+
+WRITEBUFFER_USE_MEMORY_VIEW_MIN_SIZE = 4096
+
+
+class WriteBuffer(object):
+
+    def __init__(self):
+        self._deque = collections.deque()
+        self._total_length = 0
+        self._has_view = False
+
+    def __str__(self):
+        return self._tobytes(self._deque)
+
+    def _tobytes(self, iterable):
+        if not self._has_view:
+            # fast path
+            return b"".join(iterable)
+        else:
+            tmp = [x.tobytes() if isinstance(x, memoryview) else x
+                   for x in iterable]
+            return b"".join(tmp)
+
+    def is_empty(self):
+        return self._total_length == 0
+
+    def append(self, data, right=True):
+        length = len(data)
+        if length == 0:
+            return
+        self._total_length += length
+        if right:
+            self._deque.append(data)
+        else:
+            self._deque.appendleft(data)
+
+    def extend(self, write_buffer):
+        self._deque.extend(write_buffer._deque)
+        self._total_length += write_buffer._total_length
+
+    def appendleft(self, data):
+        self.append(data, right=False)
+
+    def get_chunk(self, chunk_max_size):
+        if self._total_length < chunk_max_size:
+            # fastpath (the whole queue fit in a single chunk)
+            res = self._tobytes(self._deque)
+            self._deque.clear()
+            self._has_view = False
+            self._total_length = 0
+            return res
+        chunk_size = 0
+        tmp_list = []
+        while True:
+            try:
+                data = self._deque.popleft()
+                data_length = len(data)
+                self._total_length -= data_length
+                if chunk_size == 0:
+                    # first iteration
+                    if data_length == chunk_max_size:
+                        return data
+                    elif data_length > chunk_max_size:
+                        if data_length < WRITEBUFFER_USE_MEMORY_VIEW_MIN_SIZE \
+                           or isinstance(data, memoryview):
+                            view = data
+                        else:
+                            view = memoryview(data)
+                        self._has_view = True
+                        self.appendleft(view[chunk_max_size:])
+                        return view[:chunk_max_size]
+                else:
+                    # not first iteration
+                    if chunk_size + data_length > chunk_max_size:
+                        if data_length < WRITEBUFFER_USE_MEMORY_VIEW_MIN_SIZE \
+                           or isinstance(data, memoryview):
+                            view = data
+                        else:
+                            view = memoryview(data)
+                        self._has_view = True
+                        limit = chunk_max_size - chunk_size - data_length
+                        self.appendleft(view[limit:])
+                        data = view[:limit]
+                tmp_list.append(data)
+                chunk_size += data_length
+                if chunk_size >= chunk_max_size:
+                    break
+            except IndexError:
+                self.has_view = False
+                break
+        return self._tobytes(tmp_list)
 
 
 def format_args_in_redis_protocol(*args):
@@ -31,11 +123,12 @@ def format_args_in_redis_protocol(*args):
         >>> format_args_in_redis_protocol("HSET", "key", "field", "value")
         '*4\r\n$4\r\nHSET\r\n$3\r\nkey\r\n$5\r\nfield\r\n$5\r\nvalue\r\n'
     """
-    l = "*%d" % len(args)
+    buf = WriteBuffer()
+    l = "*%d\r\n" % len(args)
     if six.PY2:
-        lines = [l]
+        buf.append(l)
     else:  # pragma: no cover
-        lines = [l.encode('utf-8')]
+        buf.append(l.encode('utf-8'))
     for arg in args:
         if isinstance(arg, six.text_type):
             # it's a unicode string in Python2 or a un standard (unicode)
@@ -55,14 +148,14 @@ def format_args_in_redis_protocol(*args):
                 arg = tmp.encode('utf-8')
         else:
             raise Exception("don't know what to do with %s" % type(arg))
-        l = "$%d" % len(arg)
+        l = "$%d\r\n" % len(arg)
         if six.PY2:
-            lines.append(l)
+            buf.append(l)
         else:  # pragma: no cover
-            lines.append(l.encode('utf-8'))
-        lines.append(arg)
-    lines.append(b"")
-    return b"\r\n".join(lines)
+            buf.append(l.encode('utf-8'))
+        buf.append(arg)
+        buf.append(b"\r\n")
+    return buf
 
 
 class ContextManagerFuture(Future):

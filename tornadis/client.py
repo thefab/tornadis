@@ -7,16 +7,19 @@
 import tornado.ioloop
 import tornado.gen
 import hiredis
+import logging
+import collections
+import functools
 import toro
-import io
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol, StopObject
+from tornadis.utils import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 import tornadis
 
-# FIXME: error handling
+LOG = logging.getLogger()
 
 
 class Client(object):
@@ -25,40 +28,46 @@ class Client(object):
     Attributes:
         host (string): the host name to connect to.
         port (int): the port to connect to.
-        connect_timeout (int): connect timeout (seconds)
-        write_timeout (int): write timeout (seconds)
-        read_timeout (int): read timeout (seconds) (not used with
-            pubsub_pop_message() which has a specific deadline parameter)
-        subscribed (boolean): is the client object subscribed to redis
-            (with pubsub methods).
-        __reply_queue (toro.Queue): toro queue to put redis replies.
+        read_page_size (int): page size for reading.
+        write_page_size (int): page size for writing.
+        connect_timeout (int): timeout (in seconds) for connecting.
+        subscribed (boolean): True if the client is in subscription mode
+        __callback_queue (collections.deque): FIXME
+        _reply_list (list): FXME
         __reader: hiredis reader object.
-        __connection: tornadis low level Connection object.
     """
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
+                 read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
+                 write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 write_timeout=tornadis.DEFAULT_WRITE_TIMEOUT,
-                 read_timeout=tornadis.DEFAULT_READ_TIMEOUT,
                  ioloop=None):
         """Constructor.
 
         Args:
             host (string): the host name to connect to.
             port (int): the port to connect to.
-            connect_timeout (int): connect timeout (seconds)
-            write_timeout (int): write timeout (seconds)
-            read_timeout (int): read timeout (seconds)
+            read_page_size (int): page size for reading.
+            write_page_size (int): page size for writing.
+            connect_timeout (int): timeout (in seconds) for connecting.
+            ioloop (IOLoop): the tornado ioloop to use.
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
         self.port = port
+        self.read_page_size = read_page_size
+        self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
-        self.write_timeout = write_timeout
-        self.read_timeout = read_timeout
-        self.subscribed = False
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
+        self.subscribed = False
+        self.__connection = None
+        self.__reader = None
+        # Used for normal clients
+        self.__callback_queue = None
+        # Used for subscribed clients
+        self._condition = toro.Condition()
+        self._reply_list = None
 
     def is_connected(self):
         """Returns True is the client is connected to redis.
@@ -67,9 +76,8 @@ class Client(object):
             True if the client if connected to redis.
         """
         return (self.__connection is not None) and \
-               (self.__connection.connected)
+               (self.__connection.is_connected())
 
-    @tornado.gen.coroutine
     def connect(self):
         """Connects the client object to redis.
 
@@ -82,16 +90,17 @@ class Client(object):
         """
         if self.is_connected():
             raise ClientError("you are already connected")
-        cb1 = self._close_callback
-        cb2 = self._read_callback
-        self.__reply_queue = toro.Queue()
+        cb1 = self._read_callback
+        cb2 = self._close_callback
+        self.__callback_queue = collections.deque()
+        self._reply_list = []
         self.__reader = hiredis.Reader()
-        self.__connection = Connection(host=self.host, port=self.port,
-                                       connect_timeout=self.connect_timeout,
-                                       write_timeout=self.write_timeout,
-                                       ioloop=self.__ioloop)
-        yield self.__connection.connect()
-        self.__connection.register_read_until_close_callback(cb1, cb2)
+        self.__connection = Connection(cb1, cb2, host=self.host,
+                                       port=self.port, ioloop=self.__ioloop,
+                                       read_page_size=self.read_page_size,
+                                       write_page_size=self.write_page_size,
+                                       connect_timeout=self.connect_timeout)
+        return self.__connection.connect()
 
     def disconnect(self):
         """Disconnects the client object from redis.
@@ -99,27 +108,28 @@ class Client(object):
         It's safe to use this method even if you are already disconnected.
 
         Returns:
-            a Future object with no result.
+            a Future object with undetermined result
         """
         if not self.is_connected():
             return
         try:
-            return self._simple_call("QUIT")
+            return tornado.gen.Task(self._simple_call, "QUIT")
         except ConnectionError:
             if self.__connection is not None:
                 self.__connection.disconnect()
 
-    def _close_callback(self, data=None):
+    def _close_callback(self):
         """Callback called when redis closed the connection.
 
-        Args:
-            data (str): string (buffer) read on the socket just before redis
-                closed the connection.
+        The callback queue is emptied and we call each callback found
+        with a special "StopObject" to wake up blocked client.
         """
-        if data is not None:
-            self._read_callback(data)
-        self.__reply_queue.put_nowait(StopObject())
-        self.__connection.disconnect()
+        while True:
+            try:
+                callback = self.__callback_queue.popleft()
+                callback(StopObject())
+            except IndexError:
+                break
 
     def _read_callback(self, data=None):
         """Callback called when some data are read on the socket.
@@ -135,7 +145,14 @@ class Client(object):
             while True:
                 reply = self.__reader.gets()
                 if reply is not False:
-                    self.__reply_queue.put_nowait(reply)
+                    try:
+                        callback = self.__callback_queue.popleft()
+                        # normal client (1 reply = 1 callback)
+                        callback(reply)
+                    except IndexError:
+                        # pubsub clients
+                        self._reply_list.append(reply)
+                        self._condition.notify_all()
                 else:
                     break
 
@@ -161,8 +178,7 @@ class Client(object):
             a Future with the decoded redis reply as result
 
         Raises:
-            ClientError: you are not connected ou you are in pubsub mode
-            ConnectionError: there is a connection error
+            ClientError: you are not connected
 
         Examples:
 
@@ -175,192 +191,57 @@ class Client(object):
         """
         if not self.is_connected():
             raise ClientError("you are not connected")
-        if self.subscribed:
-            raise ClientError("This client is in pubsub mode, "
-                              "only pubsub_* command are allowed")
+        discard = False
+        callback = False
         if 'discard_reply' in kwargs:
-            if 'callback' in kwargs:
+            discard = True
+            kwargs.pop('discard_reply')
+        if 'callback' in kwargs:
+            callback = True
+            if discard:
                 raise ClientError("Don't use callback and "
                                   "discard_reply together")
-            kwargs['callback'] = self._discard_reply
-            kwargs.pop('discard_reply')
         if len(args) == 1 and isinstance(args[0], Pipeline):
-            return self._pipelined_call(args[0], **kwargs)
+            fn = self._pipelined_call
+            arguments = (args[0],)
         else:
-            return self._simple_call(*args, **kwargs)
+            fn = self._simple_call
+            arguments = args
+        if discard or callback:
+            fn(*arguments, **kwargs)
+        else:
+            return tornado.gen.Task(fn, *arguments, **kwargs)
 
     def _discard_reply(self, reply):
         pass
 
-    @tornado.gen.coroutine
-    def _simple_call(self, *args):
+    def _reply_aggregator(self, callback, replies, reply):
+        self._reply_list.append(reply)
+        if len(self._reply_list) == replies:
+            callback(self._reply_list)
+            self._reply_list = []
+
+    def _simple_call(self, *args, **kwargs):
+        callback = kwargs.get('callback', self._discard_reply)
         msg = format_args_in_redis_protocol(*args)
+        self.__callback_queue.append(callback)
         self.__connection.write(msg)
-        reply = yield self._reply_queue_get()
-        raise tornado.gen.Return(reply)
 
-    def _simple_call_without_pop_reply(self, *args):
+    def _simple_call_with_multiple_replies(self, replies, *args, **kwargs):
+        original_callback = kwargs.get('callback', self._discard_reply)
         msg = format_args_in_redis_protocol(*args)
+        callback = functools.partial(self._reply_aggregator, original_callback,
+                                     replies)
+        for _ in range(0, replies):
+            self.__callback_queue.append(callback)
         self.__connection.write(msg)
 
-    def pubsub_subscribe(self, *args):
-        """Subscribes to a list of channels.
-
-        http://redis.io/topics/pubsub
-
-        Args:
-            *args: variable list of channels to subscribe.
-
-        Returns:
-            Future: Future with True as result if the subscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
-        Examples:
-
-            >>> yield client.pubsub_subscribe("channel1", "channel2")
-        """
-        if not self.is_connected():
-            raise ClientError("you are not connected")
-        return self._pubsub_subscribe(b"SUBSCRIBE", *args)
-
-    def pubsub_psubscribe(self, *args):
-        """Subscribes to a list of patterns.
-
-        http://redis.io/topics/pubsub
-
-        Args:
-            *args: variable list of patterns to subscribe.
-
-        Returns:
-            Future: Future with True as result if the subscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
-        Examples:
-
-            >>> yield client.pubsub_psubscribe("channel*", "foo*")
-        """
-        return self._pubsub_subscribe(b"PSUBSCRIBE", *args)
-
-    @tornado.gen.coroutine
-    def _pubsub_subscribe(self, command, *args):
-        self._simple_call_without_pop_reply(command, *args)
-        for _ in args:
-            reply = yield self._reply_queue_get()
-            if len(reply) != 3 or reply[0].lower() != command.lower() or \
-               reply[2] == 0:
-                raise tornado.gen.Return(False)
-        self.subscribed = True
-        raise tornado.gen.Return(True)
-
-    def pubsub_unsubscribe(self, *args):
-        """Unsubscribes from a list of channels.
-
-        http://redis.io/topics/pubsub
-
-        Args:
-            *args: variable list of channels to unsubscribe.
-
-        Returns:
-            Future: Future with True as result if the unsubscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
-        Examples:
-
-            >>> yield client.pubsub_unsubscribe("channel1", "channel2")
-        """
-        return self._pubsub_unsubscribe(b"UNSUBSCRIBE", *args)
-
-    def pubsub_punsubscribe(self, *args):
-        """Unsubscribes from a list of patterns.
-
-        http://redis.io/topics/pubsub
-
-        Args:
-            *args: variable list of patterns to unsubscribe.
-
-        Returns:
-            Future: Future with True as result if the unsubscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
-        Examples:
-
-            >>> yield client.pubsub_punsubscribe("channel*", "foo*")
-
-        """
-        return self._pubsub_unsubscribe(b"PUNSUBSCRIBE", *args)
-
-    @tornado.gen.coroutine
-    def _pubsub_unsubscribe(self, command, *args):
-        self._simple_call_without_pop_reply(command, *args)
-        reply = None
-        for _ in args:
-            reply = yield self._reply_queue_get()
-            if reply is None or len(reply) != 3 or \
-               reply[0].lower() != command.lower():
-                raise tornado.gen.Return(False)
-        if reply is not None and reply[2] == 0:
-            self.subscribed = False
-        raise tornado.gen.Return(True)
-
-    @tornado.gen.coroutine
-    def pubsub_pop_message(self, deadline=None):
-        """Pops a message for a subscribed client.
-
-        Args:
-            deadline (int): max number of seconds to wait (None => no timeout)
-
-        Returns:
-            Future with the popped message as result (or None if timeout)
-
-        Raises:
-            ConnectionError: when there is a connection error
-            ClientError: when you are not subscribed to anything
-        """
-        if not self.subscribed:
-            raise ClientError("you must subscribe before using "
-                              "pubsub_pop_message")
-        try:
-            pop = self._reply_queue_get
-            reply = yield pop(deadline=deadline,
-                              raise_exception_for_timeout=False)
-        except toro.Timeout:
-            reply = None
-        raise tornado.gen.Return(reply)
-
-    @tornado.gen.coroutine
-    def _reply_queue_get(self, deadline=None,
-                         raise_exception_for_timeout=True):
-        reply = yield self.__reply_queue.get(deadline=deadline)
-        if isinstance(reply, StopObject):
-            raise ConnectionError("connection to redis closed by the server")
-        if raise_exception_for_timeout and reply is None and \
-           deadline is not None:
-            self.__connection.disconnect()
-            raise ConnectionError("read timeout")
-        raise tornado.gen.Return(reply)
-
-    @tornado.gen.coroutine
-    def _pipelined_call(self, pipeline):
-        buf = io.BytesIO()
+    def _pipelined_call(self, pipeline, callback):
+        buf = WriteBuffer()
+        replies = len(pipeline.pipelined_args)
+        cb = functools.partial(self._reply_aggregator, callback, replies)
         for args in pipeline.pipelined_args:
-            msg = format_args_in_redis_protocol(*args)
-            buf.write(msg)
-        self.__connection.write(buf.getvalue())
-        buf.close()
-        result = []
-        while len(result) < pipeline.number_of_stacked_calls:
-            reply = yield self._reply_queue_get()
-            result.append(reply)
-        raise tornado.gen.Return(result)
+            self.__callback_queue.append(cb)
+            tmp_buf = format_args_in_redis_protocol(*args)
+            buf.extend(tmp_buf)
+        self.__connection.write(buf)

@@ -12,11 +12,14 @@ DEFAULT_PORT = 6379
 DEFAULT_CONNECT_TIMEOUT = 20
 DEFAULT_WRITE_TIMEOUT = 20
 DEFAULT_READ_TIMEOUT = 20
+DEFAULT_READ_PAGE_SIZE = 65536
+DEFAULT_WRITE_PAGE_SIZE = 65536
 
 from tornadis.client import Client
+from tornadis.pubsub import PubSubClient
 from tornadis.pool import ClientPool
 from tornadis.pipeline import Pipeline
 from tornadis.exceptions import TornadisException, ConnectionError, ClientError
 
 __all__ = ['Client', 'ClientPool', 'Pipeline', 'TornadisException',
-           'ConnectionError', 'ClientError']
+           'ConnectionError', 'ClientError', 'PubSubClient']
