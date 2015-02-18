@@ -9,14 +9,18 @@
 
 ## What is it ?
 
-`tornadis` is an async minimal redis client for tornado ioloop designed for performances (use C hiredis parser).
+`tornadis` is an async minimal redis client for tornado ioloop designed for performance (uses C hiredis parser).
 
 **WARNING : tornadis is at an early stage of developement**
 
 ### Features
 
 - simple
-- good performances
-- coroutines friendly
-- production ready (timeouts, pool, error management)
+- good performance
+- coroutine friendly
+- production ready (timeouts, connection pool, error management)
 - nearly all redis features (pipeline, pubsub, standard commands)
+
+### Full documentation
+
+Full documentation is available at http://tornadis.readthedocs.org
