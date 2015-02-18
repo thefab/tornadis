@@ -23,6 +23,9 @@ class WriteBuffer(object):
     def __str__(self):
         return self._tobytes(self._deque)
 
+    def __bytes__(self):
+        return self._tobytes(self._deque)
+
     def _tobytes(self, iterable):
         if not self._has_view:
             # fast path

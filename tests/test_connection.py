@@ -13,15 +13,16 @@ from support import test_redis_or_raise_skiptest
 import hiredis
 import functools
 import random
+import six
 
 
-BIG_VALUE = "".join(["%i" % random.randint(0, 9) for x in range(0, 1000000)])
+BIG_VALUE = six.b("".join(["%i" % random.randint(0, 9) for x in range(0, 1000000)]))
 
 
 class FakeSocketObject(object):
 
     def __init__(self, *args, **kwargs):
-        cls = socket._socketobject
+        cls = socket._socket.socket
         self.__socket = cls(*args, **kwargs)
 
     def setblocking(self, *args, **kwargs):
