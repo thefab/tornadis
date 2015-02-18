@@ -217,12 +217,10 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         reply2 = yield self.reply_queue.get()
         self.assertEquals(reply2, b"OK")
         c.write(data1)
-        try:
-            c._handle_write()
-            c._handle_read()
-            raise Exception("ConnectionError not raised")
-        except ConnectionError:
-            pass
+        # Wait a short moment while the server closes the socket
+        yield tornado.gen.sleep(.0001)
+        self.assertRaises(ConnectionError, c._handle_write)
+        self.assertRaises(ConnectionError, c._handle_read)
         self.assertFalse(c.is_connected())
         c.disconnect()
 
