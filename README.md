@@ -28,24 +28,26 @@
 Let's do a blocking pop an a non-existing queue with a 3 seconds timeout so
 that each request takes 3 seconds to be served:
 
-    import tornado
-    from tornado.web import RequestHandler, Application, url
-    import tornadis
+```python
+import tornado
+from tornado.web import RequestHandler, Application, url
+import tornadis
 
 
-    class GetHandler(RequestHandler):
+class GetHandler(RequestHandler):
 
-        @tornado.gen.coroutine
-        def get(self):
-            client = tornadis.Client(port=6379)
-            yield client.connect()
-            yield client.call("BLPOP", "empty", 3)
-            self.finish()
+    @tornado.gen.coroutine
+    def get(self):
+        client = tornadis.Client(port=6379)
+        yield client.connect()
+        yield client.call("BLPOP", "empty", 3)
+        self.finish()
 
 
-    app = Application([url(r"/", GetHandler)])
-    app.listen(8888)
-    tornado.ioloop.IOLoop.current().start()
+app = Application([url(r"/", GetHandler)])
+app.listen(8888)
+tornado.ioloop.IOLoop.current().start()
+```
 
 Now let's measure the time to complete 3 concurent requests to this service:
 
@@ -58,34 +60,36 @@ As you can see the requests are processed in parallel because Tornadis doesn't b
 
 This example demonstrates how to make parallel requests outside of a web context using Tornado's IO loop:
 
-    from datetime import datetime
-    import tornado
-    import tornadis
+```python
+from datetime import datetime
+import tornado
+import tornadis
 
 
-    def log(message):
-        print datetime.now().strftime("%H:%M:%S") + ": " + message
+def log(message):
+    print datetime.now().strftime("%H:%M:%S") + ": " + message
 
 
-    @tornado.gen.coroutine
-    def time_consuming_function():
-        log("blocking pop")
-        client = tornadis.Client(port=6379)
-        yield client.connect()
-        yield client.call("BLPOP", "empty", 3)
-        log("done waiting")
+@tornado.gen.coroutine
+def time_consuming_function():
+    log("blocking pop")
+    client = tornadis.Client(port=6379)
+    yield client.connect()
+    yield client.call("BLPOP", "empty", 3)
+    log("done waiting")
 
 
-    def debug_future(future):
-        exception = future.exception()
-        if exception is not None:
-            raise(exception)
+def debug_future(future):
+    exception = future.exception()
+    if exception is not None:
+        raise(exception)
 
 
-    loop = tornado.ioloop.IOLoop.instance()
-    loop.add_future(time_consuming_function(), debug_future)
-    loop.add_future(time_consuming_function(), debug_future)
-    loop.start()
+loop = tornado.ioloop.IOLoop.instance()
+loop.add_future(time_consuming_function(), debug_future)
+loop.add_future(time_consuming_function(), debug_future)
+loop.start()
+```
 
 
 The output shows that requests to Redis are made in parallel:
