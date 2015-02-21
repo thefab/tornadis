@@ -24,7 +24,8 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
         res = bytes(format_args_in_redis_protocol("SET", "key", "foobar"))
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$6\r\nfoobar\r\n")
-        res = bytes(format_args_in_redis_protocol("SET", "key", six.u("foobar")))
+        res = bytes(format_args_in_redis_protocol("SET", "key",
+                                                  six.u("foobar")))
         self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
                           b"$6\r\nfoobar\r\n")
 

@@ -16,7 +16,8 @@ import random
 import six
 
 
-BIG_VALUE = six.b("".join(["%i" % random.randint(0, 9) for x in range(0, 1000000)]))
+BIG_VALUE = six.b("".join(["%i" % random.randint(0, 9)
+                           for x in range(0, 1000000)]))
 
 
 class FakeSocketObject(object):
