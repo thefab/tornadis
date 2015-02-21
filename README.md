@@ -21,6 +21,10 @@
 - production ready (timeouts, connection pool, error management)
 - nearly all redis features (pipeline, pubsub, standard commands)
 
+## Full documentation
+
+Full documentation is available at http://tornadis.readthedocs.org
+
 ## Examples
 
 ### Tornado web handler
@@ -100,7 +104,3 @@ The output shows that requests to Redis are made in parallel:
     14:23:45: done waiting
     14:23:45: done waiting
 
-
-### Full documentation
-
-Full documentation is available at http://tornadis.readthedocs.org
