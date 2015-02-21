@@ -22,6 +22,9 @@ Contents:
  .. autoclass:: ClientPool
      :members:
 
+ .. autoclass:: PubSubClient
+     :members:
+
  .. autoclass:: TornadisException
      :members:
      :show-inheritance:
