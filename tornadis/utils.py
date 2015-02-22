@@ -124,6 +124,25 @@ class WriteBuffer(object):
             else:
                 self._deque.appendleft(data)
 
+    def get_pointer_or_memoryview(self, data, data_length):
+        """Gets a reference on the data object or a memoryview on it.
+
+        Utility method, the use of memoryview (or not) depends on data_length
+        and self.use_memory_view_min_size.
+
+        Args:
+            data: string of memoryview.
+            data_length: length of data arg.
+
+        Returns:
+            A reference on data object or a memoryview on it.
+        """
+        if data_length < self.use_memory_view_min_size \
+           or isinstance(data, memoryview):
+            return data
+        else:
+            return memoryview(data)
+
     def get_chunk(self, chunk_max_size):
         """Gets a chunk of the given max size.
 
@@ -139,12 +158,13 @@ class WriteBuffer(object):
             self._reset()
             return res
         chunk_write_buffer = WriteBuffer()
+        first_iteration = True
         while True:
             try:
                 data = self._deque.popleft()
                 data_length = len(data)
                 self._total_length -= data_length
-                if chunk_write_buffer._total_length == 0:
+                if first_iteration:
                     # first iteration
                     if data_length == chunk_max_size:
                         # we are lucky !
@@ -152,22 +172,20 @@ class WriteBuffer(object):
                     elif data_length > chunk_max_size:
                         # we have enough data at first iteration
                         # => fast path optimization
-                        if data_length < self.use_memory_view_min_size \
-                           or isinstance(data, memoryview):
-                            view = data
-                        else:
-                            view = memoryview(data)
+                        view = self.get_pointer_or_memoryview(data,
+                                                              data_length)
                         self.appendleft(view[chunk_max_size:])
                         return view[:chunk_max_size]
+                    else:
+                        # no single iteration fast path optimization :-(
+                        # let's use a WriteBuffer to build the result chunk
+                        chunk_write_buffer = WriteBuffer()
                 else:
                     # not first iteration
                     if chunk_write_buffer._total_length + data_length \
                        > chunk_max_size:
-                        if data_length < self.use_memory_view_min_size \
-                           or isinstance(data, memoryview):
-                            view = data
-                        else:
-                            view = memoryview(data)
+                        view = self.get_pointer_or_memoryview(data,
+                                                              data_length)
                         limit = chunk_max_size - \
                             chunk_write_buffer._total_length - data_length
                         self.appendleft(view[limit:])
@@ -179,6 +197,7 @@ class WriteBuffer(object):
                 # the buffer is empty (so no memoryview inside)
                 self._has_view = False
                 break
+            first_iteration = False
         return chunk_write_buffer._tobytes()
 
 
