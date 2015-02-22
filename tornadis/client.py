@@ -243,5 +243,5 @@ class Client(object):
         for args in pipeline.pipelined_args:
             self.__callback_queue.append(cb)
             tmp_buf = format_args_in_redis_protocol(*args)
-            buf.extend(tmp_buf)
+            buf.append(tmp_buf)
         self.__connection.write(buf)

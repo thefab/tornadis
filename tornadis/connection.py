@@ -240,7 +240,7 @@ class Connection(object):
         """
         self._ensure_connected()
         if isinstance(data, WriteBuffer):
-            self._write_buffer.extend(data)
+            self._write_buffer.append(data)
         else:
             if len(data) > 0:
                 self._write_buffer.append(data)

@@ -104,7 +104,7 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
         self.assertFalse(b.is_empty())
         self.assertEquals(b._total_length, 9)
         b2 = self._make_test_buffer()
-        b.extend(b2)
+        b.append(b2)
         s = bytes(b)
         self.assertEquals(s, b"123456789123456789")
         self.assertFalse(b.is_empty())
