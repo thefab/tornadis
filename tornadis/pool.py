@@ -12,26 +12,21 @@ from collections import deque
 from tornadis.client import Client
 from tornadis.utils import ContextManagerFuture
 
-# FIXME: error handling
-
 
 class ClientPool(object):
-    """High level object to deal with a pool of redis clients
+    """High level object to deal with a pool of redis clients.
 
     Attributes:
+        max_size (int): max size of the pool (-1 means "no limit").
         client_kwargs (dict): Client constructor arguments
-        __sem (toro.Semaphore): Semaphore object to deal with pool limits
-            (only when max_size != -1)
-        __pool (deque): double-ended queue which contains pooled client objets
     """
 
     def __init__(self, max_size=-1, **client_kwargs):
         """Constructor.
 
         Args:
-            max_size (int): max size of the pool (-1 means "no limit")
-                (dict): Client constructor arguments
-            client_kwargs (dict): Client constructor arguments
+            max_size (int): max size of the pool (-1 means "no limit").
+            client_kwargs (dict): Client constructor arguments.
         """
         self.max_size = max_size
         self.client_kwargs = client_kwargs
@@ -50,6 +45,9 @@ class ClientPool(object):
 
         Returns:
             A Future object with connected Client instance as a result.
+
+        Raises:
+            ConnectionError: when there is a connection error.
         """
         if self.__sem is not None:
             yield self.__sem.acquire()
@@ -65,6 +63,18 @@ class ClientPool(object):
         raise tornado.gen.Return(client)
 
     def connected_client(self):
+        """Returns a ContextManagerFuture to be yielded in a with statement.
+
+        Returns:
+            A ContextManagerFuture object.
+
+        Examples:
+            >>> with (yield pool.connected_client()) as client:
+                    # client is a connected tornadis.Client instance
+                    # it will be automatically released to the pool thanks to
+                    # the "with" keyword
+                    reply = yield client.call("PING")
+        """
         future = self.get_connected_client()
         cb = functools.partial(self._connected_client_release_cb, future)
         return ContextManagerFuture(future, cb)
@@ -77,7 +87,7 @@ class ClientPool(object):
         """Releases a client object to the pool.
 
         Args:
-            client: Client object
+            client: Client object.
         """
         self.__pool.append(client)
         if self.__sem is not None:
