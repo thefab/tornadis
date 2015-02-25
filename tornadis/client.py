@@ -245,3 +245,6 @@ class Client(object):
             tmp_buf = format_args_in_redis_protocol(*args)
             buf.append(tmp_buf)
         self.__connection.write(buf)
+
+    def get_last_state_change_timedelta(self):
+        return self.__connection._state.get_last_state_change_timedelta()
