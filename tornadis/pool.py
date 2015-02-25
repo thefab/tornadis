@@ -19,17 +19,22 @@ class ClientPool(object):
 
     Attributes:
         max_size (int): max size of the pool (-1 means "no limit").
+        client_timeout (int): timeout in seconds of a connection released
+            to the pool (-1 means "no timeout").
         client_kwargs (dict): Client constructor arguments
     """
 
-    def __init__(self, max_size=-1, **client_kwargs):
+    def __init__(self, max_size=-1, client_timeout=-1, **client_kwargs):
         """Constructor.
 
         Args:
             max_size (int): max size of the pool (-1 means "no limit").
+            client_timeout (int): timeout in seconds of a connection released
+                to the pool (-1 means "no timeout").
             client_kwargs (dict): Client constructor arguments.
         """
         self.max_size = max_size
+        self.client_timeout = client_timeout
         self.client_kwargs = client_kwargs
         self.__pool = deque()
         if self.max_size != -1:
@@ -57,11 +62,21 @@ class ClientPool(object):
             while True:
                 client = self.__pool.popleft()
                 if client.is_connected():
+                    if self._is_expired_client(client):
+                        client.disconnect()
+                        continue
                     break
         except IndexError:
             client = self._make_client()
             yield client.connect()
         raise tornado.gen.Return(client)
+
+    def _is_expired_client(self, client):
+        if self.client_timeout != -1 and client.is_connected():
+            delta = client.get_last_state_change_timedelta()
+            if delta.total_seconds() >= self.client_timeout:
+                return True
+        return False
 
     def connected_client(self):
         """Returns a ContextManagerFuture to be yielded in a with statement.
@@ -90,7 +105,8 @@ class ClientPool(object):
         Args:
             client: Client object.
         """
-        self.__pool.append(client)
+        if not self._is_expired_client(client):
+            self.__pool.append(client)
         if self.__sem is not None:
             self.__sem.release()
 

@@ -86,3 +86,17 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         for i in range(0, 5):
             pool.append(client)
         c.destroy()
+
+    @tornado.testing.gen_test
+    def test_timeout(self):
+        c = ClientPool(max_size=5, client_timeout=1)
+        client1 = yield c.get_connected_client()
+        c.release_client(client1)
+        client2 = yield c.get_connected_client()
+        c.release_client(client2)
+        self.assertTrue(client1 == client2)
+        yield tornado.gen.sleep(1)
+        client3 = yield c.get_connected_client()
+        self.assertFalse(client1 == client3)
+        c.release_client(client3)
+        c.destroy()
