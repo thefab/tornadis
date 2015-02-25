@@ -8,6 +8,7 @@ import functools
 
 from tornadis.pool import ClientPool
 from tornadis.client import Client
+from tornadis.exceptions import ClientError
 from support import test_redis_or_raise_skiptest
 
 
@@ -63,4 +64,25 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
             pass
         client = yield c.get_connected_client()
         c.release_client(client)
+        c.destroy()
+
+    @tornado.testing.gen_test
+    def test_preconnect1(self):
+        c = ClientPool(max_size=-1)
+        try:
+            yield c.preconnect()
+            raise Exception("ClientError not raised")
+        except ClientError:
+            pass
+
+    @tornado.testing.gen_test
+    def test_preconnect2(self):
+        c = ClientPool(max_size=5)
+        yield c.preconnect(5)
+        pool = c._ClientPool__pool
+        for i in range(0, 5):
+            client = pool.popleft()
+            self.assertTrue(client.is_connected())
+        for i in range(0, 5):
+            pool.append(client)
         c.destroy()
