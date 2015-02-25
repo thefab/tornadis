@@ -110,14 +110,15 @@ class WriteBuffer(object):
             else:
                 self._deque.extendleft(data._deque)
             self._total_length += data._total_length
+            self._has_view = self._has_view and data._has_view
         else:
+            length = len(data)
+            if length == 0:
+                return
             if isinstance(data, memoryview):
                 # data is a memory viewobject
                 # nothing spacial but now the buffer has views
                 self._has_view = True
-            length = len(data)
-            if length == 0:
-                return
             self._total_length += length
             if right:
                 self._deque.append(data)
@@ -146,18 +147,19 @@ class WriteBuffer(object):
     def get_chunk(self, chunk_max_size):
         """Gets a chunk of the given max size.
 
+        Optimized to avoid too much string copies.
+
         Args:
-            chunk_max_size (int): max size of the returned chunk
+            chunk_max_size (int): max size of the returned chunk.
 
         Returns:
-            FIXME
+            string (bytes) with a size <= chunk_max_size.
         """
         if self._total_length < chunk_max_size:
             # fastpath (the whole queue fit in a single chunk)
             res = self._tobytes()
             self._reset()
             return res
-        chunk_write_buffer = WriteBuffer()
         first_iteration = True
         while True:
             try:
