@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+<h1>WebSocket example</h1>
+<p>
+Use redis-cli to push data to the 'ws-queue' list:
+<pre>
+  redis-cli&gt; LPUSH ws-queue foo
+</pre>
+The data should then show up up below:
+</p>
+<pre id="container">
+</pre>
+<script type="text/javascript">
+var ws = new WebSocket("ws://localhost:8888/ws");
+ws.onopen = function() {
+  console.log("Connected to WebSocket");
+};
+ws.onmessage = function (evt) {
+  document.getElementById("container")
+    .appendChild(document.createTextNode(evt.data + "\n"));
+};
+</script>
+</body>
+</html>
