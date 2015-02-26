@@ -161,11 +161,13 @@ class Client(object):
 
         Following options are available (not part of the redis command itself):
 
-        - callback: function called (with the result as argument) when the
+        - callback
+            Function called (with the result as argument) when the
             future resolves (standard behavior of the tornado.gen.coroutine
             decorator => do not yield the returned Future when you use a
             callback argument)
-        - discard_reply: if True (default False), don't wait for completion
+        - discard_reply
+            If True (default False), don't wait for completion
             and discard the reply (when it becomes available) => do not
             yield the returned Future and don't use together with callback
             option
