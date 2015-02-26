@@ -48,5 +48,9 @@ setup(
         'Topic :: Utilities',
         'Topic :: System :: Distributed Computing',
         'Topic :: Software Development',
-    ]
+    ],
+    entry_points="""
+    [console_scripts]
+    tornadis-benchmark = tornadis.benchmark:main
+    """,
 )
