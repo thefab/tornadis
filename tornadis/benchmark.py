@@ -8,7 +8,7 @@ import tornadis
 import tornado
 
 
-logging.basicConfig(level=logging.CRITICAL)
+# logging.basicConfig(level=logging.CRITICAL)
 
 
 def get_parameters():
@@ -39,13 +39,15 @@ def get_parameters():
     return parser.parse_args()
 
 
-def group_iterable(iterable, group_size):
-    it = iter(iterable)
+def group_iterable(iterable, total_size, group_size):
+    processed_size = 0
     while True:
-        chunk = tuple(itertools.islice(it, group_size))
-        if not chunk:
+        if processed_size >= total_size:
             return
-        yield chunk
+        else:
+            chunk = itertools.islice(iterable, group_size)
+            processed_size += group_size
+            yield chunk
 
 
 class Benchmark(object):
@@ -67,7 +69,8 @@ class Benchmark(object):
         futures = (client.call("SET", "benchmark-key", self.value)
                    for _ in xrange(self.requests_per_client))
         if self.params.batch_size:
-            batches = group_iterable(futures, self.params.batch_size)
+            batches = group_iterable(futures, self.requests_per_client,
+                                     self.params.batch_size)
             for batch in itertools.imap(list, batches):
                 print "Send {} requests with client {}".format(len(batch),
                                                                client_number)
