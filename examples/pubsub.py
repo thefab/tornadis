@@ -21,7 +21,7 @@ def pubsub_coroutine():
         print(msg)
         # >>> ['pmessage', 'foo*', 'foo', 'bar']
         # (for a "publish foo bar" command from another connection)
-        if msg[3] == "STOP":
+        if len(msg) >= 4 and msg[3] == "STOP":
             # it's a STOP message, let's unsubscribe and quit the loop
             yield client.pubsub_punsubscribe("foo*")
             yield client.pubsub_unsubscribe("bar")
