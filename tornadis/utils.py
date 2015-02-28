@@ -289,7 +289,7 @@ class ContextManagerFuture(Future):
             exit_callback: the exit callback to call at the end of
                 the block
         """
-        super(ContextManagerFuture, self).__init__()
+        Future.__init__(self)
         wrapped.add_done_callback(self._done_callback)
         self._exit_callback = exit_callback
         self._wrapped = wrapped
