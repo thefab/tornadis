@@ -31,10 +31,7 @@ class Client(object):
         read_page_size (int): page size for reading.
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
-        subscribed (boolean): True if the client is in subscription mode
-        __callback_queue (collections.deque): FIXME
-        _reply_list (list): FXME
-        __reader: hiredis reader object.
+        subscribed (boolean): True if the client is in subscription mode.
     """
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
@@ -50,7 +47,6 @@ class Client(object):
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
-            ioloop (IOLoop): the tornado ioloop to use.
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -85,8 +81,8 @@ class Client(object):
             a Future object with no result.
 
         Raises:
-            ConnectionError: when there is a connection error
-            ClientError: when you are already connected
+            ConnectionError: when there is a connection error.
+            ClientError: when you are already connected.
         """
         if self.is_connected():
             raise ClientError("you are already connected")
@@ -108,7 +104,7 @@ class Client(object):
         It's safe to use this method even if you are already disconnected.
 
         Returns:
-            a Future object with undetermined result
+            a Future object with undetermined result.
         """
         if not self.is_connected():
             return
@@ -157,7 +153,7 @@ class Client(object):
                     break
 
     def call(self, *args, **kwargs):
-        """Calls a redis command and waits for the reply
+        """Calls a redis command and waits for the reply.
 
         Following options are available (not part of the redis command itself):
 
@@ -165,22 +161,22 @@ class Client(object):
             Function called (with the result as argument) when the
             future resolves (standard behavior of the tornado.gen.coroutine
             decorator => do not yield the returned Future when you use a
-            callback argument)
+            callback argument).
         - discard_reply
             If True (default False), don't wait for completion
             and discard the reply (when it becomes available) => do not
             yield the returned Future and don't use together with callback
-            option
+            option.
 
         Args:
-            *args: full redis command as variable length argument list
-            **kwargs: options as keyword parameters
+            *args: full redis command as variable length argument list.
+            **kwargs: options as keyword parameters.
 
         Returns:
-            a Future with the decoded redis reply as result
+            a Future with the decoded redis reply as result.
 
         Raises:
-            ClientError: you are not connected
+            ClientError: you are not connected.
 
         Examples:
 

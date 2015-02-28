@@ -52,8 +52,8 @@ class Connection(object):
         """Constructor.
 
         Args:
-            read_callback: FIXME
-            close_callback: FIXME
+            read_callback: callback called when there is something to read.
+            close_callback: callback called when the connection is closed.
             host (string): the host name to connect to.
             port (int): the port to connect to.
             read_page_size (int): page size for reading.
@@ -99,7 +99,7 @@ class Connection(object):
             Future: a Future object with no specific result.
 
         Raises:
-            ConnectionError: when there is a connection error
+            ConnectionError: when there is a connection error.
         """
         self._ensure_not_connected()
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

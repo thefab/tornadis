@@ -17,6 +17,20 @@ LOG = logging.getLogger()
 
 
 class PubSubClient(Client):
+    """High level specific object to interact with pubsub redis.
+
+    The call() method is forbidden with this object.
+
+    More informations on the redis side: http://redis.io/topics/pubsub
+
+    Attributes:
+        host (string): the host name to connect to.
+        port (int): the port to connect to.
+        read_page_size (int): page size for reading.
+        write_page_size (int): page size for writing.
+        connect_timeout (int): timeout (in seconds) for connecting.
+        subscribed (boolean): True if the client is in subscription mode.
+    """
 
     def call(self, *args, **kwargs):
         raise ClientError("not allowed with PubSubClient object")
