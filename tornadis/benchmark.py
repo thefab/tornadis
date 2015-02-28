@@ -1,14 +1,10 @@
 import argparse
 import datetime
 import itertools
-import logging
 import math
 import sys
 import tornadis
 import tornado
-
-
-# logging.basicConfig(level=logging.CRITICAL)
 
 
 def get_parameters():
@@ -118,7 +114,7 @@ class Benchmark(object):
                 pipeline = tornadis.Pipeline()
         if pipeline.number_of_stacked_calls > 0:
             resp_count = yield self._call_pipeline(client, pipeline,
-                                                  client_number)
+                                                   client_number)
             self.response_count += resp_count
 
     def stop_loop(self, future):
