@@ -141,8 +141,8 @@ class PubSubClient(Client):
             if reply is None or len(reply) != 3 or \
                reply[0].lower() != command.lower():
                 raise tornado.gen.Return(False)
-        if reply is not None and reply[2] == 0:
-            self.subscribed = False
+            if reply is not None and reply[2] == 0:
+                self.subscribed = False
         raise tornado.gen.Return(True)
 
     @tornado.gen.coroutine
