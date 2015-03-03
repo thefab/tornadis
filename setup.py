@@ -5,7 +5,6 @@
 # See the LICENSE file for more information.
 
 from setuptools import setup, find_packages
-import tornadis
 
 DESCRIPTION = "tornadis is an async minimal redis client for tornado " \
               "ioloop designed for performances (use C hiredis parser)"
@@ -22,7 +21,7 @@ with open('pip-requirements.txt') as reqs:
                                                      line.startswith('--'))]
 setup(
     name='tornadis',
-    version=tornadis.__version__,
+    version="0.1.0",
     author="Fabien MARTY",
     author_email="fabien.marty@gmail.com",
     url="https://github.com/thefab/tornadis",
