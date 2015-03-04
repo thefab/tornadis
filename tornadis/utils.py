@@ -40,7 +40,7 @@ def format_args_in_redis_protocol(*args):
         buf.append(l.encode('utf-8'))
     for arg in args:
         if isinstance(arg, six.text_type):
-            # it's a unicode string in Python2 or a un standard (unicode)
+            # it's a unicode string in Python2 or a standard (unicode)
             # string in Python3, let's encode it in utf-8 to get raw bytes
             arg = arg.encode('utf-8')
         elif isinstance(arg, six.string_types):
