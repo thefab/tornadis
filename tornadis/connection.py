@@ -189,7 +189,7 @@ class Connection(object):
     def _handle_write(self):
         while not self._write_buffer.is_empty():
             ps = self.write_page_size
-            data = self._write_buffer.get_chunk(ps)
+            data = self._write_buffer.pop_chunk(ps)
             if len(data) > 0:
                 try:
                     size = self.__socket.send(data)
