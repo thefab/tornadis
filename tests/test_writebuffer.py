@@ -23,6 +23,13 @@ class WriteBufferTestCase(TestCase):
         else:
             return tmp
 
+    def test_empty_write_buffer(self):
+        x = WriteBuffer()
+        s = bytes(x)
+        self.assertEquals(s, b"")
+        c = x.get_chunk(4096)
+        self.assertEquals(c, b"")
+
     def test_write_buffer1(self):
         b = self._make_test_buffer()
         s = bytes(b)
