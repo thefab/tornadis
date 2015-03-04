@@ -29,10 +29,12 @@ class WriteBufferTestCase(TestCase):
         self.assertEquals(s, b"")
         c = x.get_chunk(4096)
         self.assertEquals(c, b"")
+        self.assertEquals(len(x), 0)
 
     def test_write_buffer1(self):
         b = self._make_test_buffer()
         s = bytes(b)
+        self.assertEquals(len(b), 9)
         self.assertEquals(s, b"123456789")
         self.assertFalse(b.is_empty())
         self.assertEquals(b._total_length, 9)

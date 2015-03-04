@@ -48,6 +48,9 @@ class WriteBuffer(object):
     def __bytes__(self):
         return self._tobytes()
 
+    def __len__(self):
+        return self._total_length
+
     def _tobytes(self):
         """Serializes the write buffer into a single string (bytes).
 
