@@ -55,6 +55,9 @@ def format_args_in_redis_protocol(*args):
                 arg = tmp
             else:  # pragma: no cover
                 arg = tmp.encode('utf-8')
+        elif isinstance(arg, WriteBuffer):
+            # it's a WriteBuffer object => nothing to do
+            pass
         else:
             raise Exception("don't know what to do with %s" % type(arg))
         l = "$%d\r\n" % len(arg)
