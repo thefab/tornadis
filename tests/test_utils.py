@@ -7,7 +7,6 @@ import tornado.concurrent
 
 from tornadis.utils import format_args_in_redis_protocol
 from tornadis.utils import ContextManagerFuture
-from tornadis.utils import WriteBuffer
 
 
 class DummyException(Exception):
@@ -80,64 +79,3 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
             pass
         boolean = self._test_context_manager_future_exception_cb_called
         self.assertFalse(boolean)
-
-    def _make_test_buffer(self):
-        x = WriteBuffer()
-        x.append(b"23")
-        x.append(b"4")
-        x.append(b"")
-        x.append(b"56789")
-        x.appendleft(b"1")
-        return x
-
-    def _get_chunk_as_str(self, buf, max_size):
-        tmp = buf.get_chunk(max_size)
-        if isinstance(tmp, memoryview):
-            return tmp.tobytes()
-        else:
-            return tmp
-
-    def test_write_buffer1(self):
-        b = self._make_test_buffer()
-        s = bytes(b)
-        self.assertEquals(s, b"123456789")
-        self.assertFalse(b.is_empty())
-        self.assertEquals(b._total_length, 9)
-        b2 = self._make_test_buffer()
-        b.append(b2)
-        s = bytes(b)
-        self.assertEquals(s, b"123456789123456789")
-        self.assertFalse(b.is_empty())
-        self.assertEquals(b._total_length, 18)
-        chunk = self._get_chunk_as_str(b, 1000)
-        self.assertEquals(chunk, b"123456789123456789")
-        self.assertTrue(b.is_empty())
-
-    def test_write_buffer2(self):
-        b = self._make_test_buffer()
-        chunk = self._get_chunk_as_str(b, 1)
-        self.assertEquals(chunk, b"1")
-        self.assertEquals(bytes(b), b"23456789")
-        self.assertEquals(b._total_length, 8)
-        chunk = self._get_chunk_as_str(b, 1)
-        self.assertEquals(chunk, b"2")
-        self.assertEquals(bytes(b), b"3456789")
-        self.assertEquals(b._total_length, 7)
-        chunk = self._get_chunk_as_str(b, 4)
-        self.assertEquals(chunk, b"3456")
-        self.assertEquals(bytes(b), b"789")
-        self.assertEquals(b._total_length, 3)
-        chunk = self._get_chunk_as_str(b, 10)
-        self.assertEquals(chunk, b"789")
-        self.assertEquals(bytes(b), b"")
-        self.assertEquals(b._total_length, 0)
-
-    def test_write_buffer3(self):
-        b = WriteBuffer()
-        b.append(b"x" * 10000)
-        chunk = self._get_chunk_as_str(b, 4000)
-        self.assertEquals(len(chunk), 4000)
-        chunk = self._get_chunk_as_str(b, 4000)
-        self.assertEquals(len(chunk), 4000)
-        chunk = self._get_chunk_as_str(b, 4000)
-        self.assertEquals(len(chunk), 2000)

@@ -8,7 +8,7 @@ import socket
 import tornado.iostream
 import tornado.gen
 from tornado.util import errno_from_exception
-from tornadis.utils import WriteBuffer
+from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 from tornadis.state import ConnectionState
 import tornadis

@@ -15,7 +15,7 @@ import toro
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol, StopObject
-from tornadis.utils import WriteBuffer
+from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 import tornadis
 
