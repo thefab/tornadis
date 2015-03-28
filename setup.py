@@ -21,7 +21,7 @@ with open('pip-requirements.txt') as reqs:
                                                      line.startswith('--'))]
 setup(
     name='tornadis',
-    version="0.2.0",
+    version="0.2.1",
     author="Fabien MARTY",
     author_email="fabien.marty@gmail.com",
     url="https://github.com/thefab/tornadis",
