@@ -11,6 +11,7 @@ from tornado.util import errno_from_exception
 from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 from tornadis.state import ConnectionState
+from tornado.ioloop import IOLoop
 import tornadis
 import errno
 import logging
@@ -29,6 +30,10 @@ if hasattr(errno, "WSAEINPROGRESS"):  # pragma: no cover
     _ERRNO_INPROGRESS += (errno.WSAEINPROGRESS,)
 
 LOG = logging.getLogger(__name__)
+
+READ_EVENT = IOLoop.READ
+WRITE_EVENT = IOLoop.WRITE
+ERROR_EVENT = IOLoop.WRITE
 
 
 class Connection(object):
@@ -74,6 +79,7 @@ class Connection(object):
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
         self._write_buffer = WriteBuffer()
+        self._listened_events = 0
 
     def is_connecting(self):
         """Returns True if the object is connecting."""
@@ -114,14 +120,14 @@ class Connection(object):
                     errno_from_exception(e) not in _ERRNO_WOULDBLOCK):
                 self.disconnect()
                 raise ConnectionError(e)
-            self._register_event_handler()
+            self._register_or_update_event_handler()
             yield self._state.get_changed_state_future()
             if not self.is_connected():
                 raise ConnectionError("connection timeout")
         else:
             LOG.debug("connected to %s:%i", self.host, self.port)
             self._state.set_connected()
-            self._register_event_handler()
+            self._register_or_update_event_handler()
 
     def _on_every_second(self):
         if self.is_connecting():
@@ -129,11 +135,20 @@ class Connection(object):
             if dt.total_seconds() > self.connect_timeout:
                 self.disconnect()
 
-    def _register_event_handler(self):
-        events = self.__ioloop.READ | self.__ioloop.WRITE | self.__ioloop.ERROR
-        self.__ioloop.add_handler(self.__socket.fileno(),
-                                  self._handle_events,
-                                  events)
+    def _register_or_update_event_handler(self, write=True):
+        if write:
+            listened_events = READ_EVENT | WRITE_EVENT | ERROR_EVENT
+        else:
+            listened_events = READ_EVENT | ERROR_EVENT
+        if self._listened_events == 0:
+            self.__ioloop.add_handler(self.__socket.fileno(),
+                                      self._handle_events,
+                                      listened_events)
+        else:
+            if self._listened_events != listened_events:
+                self.__ioloop.update_handler(self.__socket.fileno(),
+                                             listened_events)
+        self._listened_events = listened_events
 
     def disconnect(self):
         """Disconnects the object.
@@ -147,6 +162,7 @@ class Connection(object):
         self.__periodic_callback.stop()
         try:
             self.__ioloop.remove_handler(self.__socket.fileno())
+            self._listened_events = 0
         except:
             pass
         try:
@@ -206,6 +222,8 @@ class Connection(object):
                     if size < len(data):
                         self._write_buffer.appendleft(data[size:])
                         break
+        if self._write_buffer.is_empty():
+            self._register_or_update_event_handler(write=False)
 
     def _read(self, size):
         try:
@@ -244,3 +262,5 @@ class Connection(object):
         else:
             if len(data) > 0:
                 self._write_buffer.append(data)
+        if self._write_buffer._total_length > 0:
+            self._register_or_update_event_handler(write=True)
