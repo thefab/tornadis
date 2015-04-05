@@ -33,7 +33,7 @@ LOG = logging.getLogger(__name__)
 
 READ_EVENT = IOLoop.READ
 WRITE_EVENT = IOLoop.WRITE
-ERROR_EVENT = IOLoop.WRITE
+ERROR_EVENT = IOLoop.ERROR
 
 
 class Connection(object):
