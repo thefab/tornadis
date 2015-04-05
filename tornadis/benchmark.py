@@ -5,6 +5,8 @@ import math
 import sys
 import tornadis
 import tornado
+from six import print_
+import six
 
 
 def get_parameters():
@@ -59,53 +61,54 @@ class Benchmark(object):
     @tornado.gen.coroutine
     def multiple_set(self, client_number):
         client = tornadis.Client()
-        print "Connect client", client_number
+        print_("Connect client", client_number)
         yield client.connect()
-        print "Client", client_number, "connected"
+        print_("Client", client_number, "connected")
         futures = (client.call("SET", "benchmark-key", self.value)
-                   for _ in xrange(self.requests_per_client))
+                   for _ in six.moves.range(self.requests_per_client))
         if self.params.batch_size:
             batches = group_iterable(futures, self.requests_per_client,
                                      self.params.batch_size)
             for batch in itertools.imap(list, batches):
-                print "Send {} requests with client {}".format(len(batch),
-                                                               client_number)
+                print_("Send {} requests with client {}".format(len(batch),
+                                                                client_number))
                 responses = yield batch
                 resp_count = len(responses)
-                print "Received {} responses " \
-                      "with client {}".format(resp_count, client_number)
+                print_("Received {} responses " \
+                       "with client {}".format(resp_count, client_number))
                 self.response_count += resp_count
         else:
-            print "Send {} requests " \
-                  "with client {}".format(self.requests_per_client,
-                                          client_number)
+            print_("Send {} requests " \
+                   "with client {}".format(self.requests_per_client,
+                                           client_number))
             responses = yield list(futures)
             resp_count = len(responses)
-            print "Received {} responses with client {}".format(resp_count,
-                                                                client_number)
+            print_("Received {} responses with client {}".format(resp_count,
+                                                                 client_number)
+                   )
             self.response_count += resp_count
 
     @tornado.gen.coroutine
     def _call_pipeline(self, client, pipeline, client_number):
-        print "Send {} pipelined requests " \
-              "with client {}".format(pipeline.number_of_stacked_calls,
-                                      client_number)
+        print_("Send {} pipelined requests " \
+               "with client {}".format(pipeline.number_of_stacked_calls,
+                                       client_number))
         responses = yield client.call(pipeline)
         resp_count = len(responses)
-        print "Received {} pipelined responses " \
-              "with client {}".format(resp_count, client_number)
+        print_("Received {} pipelined responses " \
+               "with client {}".format(resp_count, client_number))
         raise tornado.gen.Return(resp_count)
 
     @tornado.gen.coroutine
     def pipelined_multiple_set(self, client_number):
         client = tornadis.Client()
-        print "Connect client", client_number
+        print_("Connect client", client_number)
         yield client.connect()
-        print "Client", client_number, "connected"
+        print_("Client", client_number, "connected")
         pipeline_size = self.params.batch_size or self.requests_per_client
-        print pipeline_size
+        print_(pipeline_size)
         pipeline = tornadis.Pipeline()
-        for _ in range(0, self.requests_per_client):
+        for _ in six.moves.range(0, self.requests_per_client):
             pipeline.stack_call("SET", "benchmark-key", self.value)
             if pipeline.number_of_stacked_calls >= pipeline_size:
                 resp_count = yield self._call_pipeline(client, pipeline,
@@ -123,22 +126,22 @@ class Benchmark(object):
             loop = tornado.ioloop.IOLoop.instance()
             loop.stop()
         if excep is not None:
-            print excep
+            print_(excep)
             raise(excep)
 
 
 def main():
     params = get_parameters()
     if params.requests % params.clients != 0:
-        print >> sys.stderr, "Number of requests must be a multiple " \
-                             "of number of clients"
+        print_("Number of requests must be a multiple " \
+               "of number of clients", file=sys.stderr)
         sys.exit(-1)
 
     loop = tornado.ioloop.IOLoop.instance()
     benchmark = Benchmark(params)
-    print "Max requests per client:", benchmark.requests_per_client
+    print_("Max requests per client:", benchmark.requests_per_client)
     before = datetime.datetime.now()
-    for client_number in xrange(params.clients):
+    for client_number in six.moves.range(params.clients):
         if params.pipeline:
             future = benchmark.pipelined_multiple_set(client_number)
         else:
@@ -147,8 +150,8 @@ def main():
     loop.start()
     after = datetime.datetime.now()
     seconds = (after - before).total_seconds()
-    print "{} seconds".format(seconds)
-    print "{} requests per second".format(int(params.requests / seconds))
+    print_("{} seconds".format(seconds))
+    print_("{} requests per second".format(int(params.requests / seconds)))
 
 
 if __name__ == '__main__':
