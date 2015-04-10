@@ -120,12 +120,16 @@ class Client(object):
         The callback queue is emptied and we call each callback found
         with an exception object to wake up blocked client.
         """
+        raise_exception = False
         while True:
             try:
                 callback = self.__callback_queue.popleft()
                 callback(ConnectionError("closed connection"))
+                raise_exception = True
             except IndexError:
                 break
+        if raise_exception:
+            raise ConnectionError("closed connection")
 
     def _read_callback(self, data=None):
         """Callback called when some data are read on the socket.
