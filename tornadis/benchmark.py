@@ -74,11 +74,11 @@ class Benchmark(object):
                                                                 client_number))
                 responses = yield batch
                 resp_count = len(responses)
-                print_("Received {} responses " \
+                print_("Received {} responses "
                        "with client {}".format(resp_count, client_number))
                 self.response_count += resp_count
         else:
-            print_("Send {} requests " \
+            print_("Send {} requests "
                    "with client {}".format(self.requests_per_client,
                                            client_number))
             responses = yield list(futures)
@@ -90,12 +90,12 @@ class Benchmark(object):
 
     @tornado.gen.coroutine
     def _call_pipeline(self, client, pipeline, client_number):
-        print_("Send {} pipelined requests " \
+        print_("Send {} pipelined requests "
                "with client {}".format(pipeline.number_of_stacked_calls,
                                        client_number))
         responses = yield client.call(pipeline)
         resp_count = len(responses)
-        print_("Received {} pipelined responses " \
+        print_("Received {} pipelined responses "
                "with client {}".format(resp_count, client_number))
         raise tornado.gen.Return(resp_count)
 
@@ -133,7 +133,7 @@ class Benchmark(object):
 def main():
     params = get_parameters()
     if params.requests % params.clients != 0:
-        print_("Number of requests must be a multiple " \
+        print_("Number of requests must be a multiple "
                "of number of clients", file=sys.stderr)
         sys.exit(-1)
 
