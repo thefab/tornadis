@@ -10,7 +10,6 @@ import toro
 import logging
 
 from tornadis.client import Client
-from tornadis.utils import StopObject
 from tornadis.exceptions import ConnectionError, ClientError
 
 LOG = logging.getLogger()
@@ -176,6 +175,6 @@ class PubSubClient(Client):
                     reply = self._reply_list.pop(0)
                 except IndexError:
                     pass
-        if isinstance(reply, StopObject):
-            raise ConnectionError("connection to redis closed by the server")
+        if isinstance(reply, ConnectionError):
+            raise reply
         raise tornado.gen.Return(reply)

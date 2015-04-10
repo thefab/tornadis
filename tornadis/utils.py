@@ -136,9 +136,3 @@ class ContextManagerFuture(Future):
             finally:
                 self._exit_callback()
         return f()
-
-
-class StopObject(object):
-    """Dummy object just to have a specific type to test."""
-
-    pass

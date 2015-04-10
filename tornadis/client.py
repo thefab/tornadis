@@ -14,7 +14,7 @@ import toro
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
-from tornadis.utils import format_args_in_redis_protocol, StopObject
+from tornadis.utils import format_args_in_redis_protocol
 from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 import tornadis
@@ -118,12 +118,12 @@ class Client(object):
         """Callback called when redis closed the connection.
 
         The callback queue is emptied and we call each callback found
-        with a special "StopObject" to wake up blocked client.
+        with an exception object to wake up blocked client.
         """
         while True:
             try:
                 callback = self.__callback_queue.popleft()
-                callback(StopObject())
+                callback(ConnectionError("closed connection"))
             except IndexError:
                 break
 
