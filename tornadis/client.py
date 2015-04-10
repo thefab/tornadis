@@ -181,6 +181,7 @@ class Client(object):
 
         Raises:
             ClientError: you are not connected.
+            ConnectionError: there are some connection error.
 
         Examples:
 
