@@ -32,12 +32,16 @@ class Client(object):
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
         subscribed (boolean): True if the client is in subscription mode.
+        return_connection_error (boolean): if True, return a ConnectionError
+            object if the redis server close the connection. If False, return
+            None (default) in that particular case.
     """
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
+                 return_connection_error=False,
                  ioloop=None):
         """Constructor.
 
@@ -47,6 +51,10 @@ class Client(object):
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
+            return_connection_error (boolean): if True, return a
+                ConnectionError object if the redis server close the
+                connection. If False, return None (default) in that particular
+                case.
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -54,6 +62,7 @@ class Client(object):
         self.read_page_size = read_page_size
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
+        self.return_connection_error = return_connection_error
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
         self.subscribed = False
@@ -118,18 +127,17 @@ class Client(object):
         """Callback called when redis closed the connection.
 
         The callback queue is emptied and we call each callback found
-        with an exception object to wake up blocked client.
+        with None or with an exception object to wake up blocked client.
         """
-        raise_exception = False
         while True:
             try:
                 callback = self.__callback_queue.popleft()
-                callback(ConnectionError("closed connection"))
-                raise_exception = True
+                if self.return_connection_error:
+                    callback(ConnectionError("closed connection"))
+                else:
+                    callback(None)
             except IndexError:
                 break
-        if raise_exception:
-            raise ConnectionError("closed connection")
 
     def _read_callback(self, data=None):
         """Callback called when some data are read on the socket.
