@@ -147,7 +147,7 @@ class Connection(object):
                 self.__ioloop.add_handler(self.__socket_fileno,
                                           self._handle_events,
                                           listened_events)
-            except OSError:
+            except (OSError, IOError):
                 self.disconnect()
                 return
         else:
@@ -155,7 +155,7 @@ class Connection(object):
                 try:
                     self.__ioloop.update_handler(self.__socket_fileno,
                                                  listened_events)
-                except OSError:
+                except (OSError, IOError):
                     self.disconnect()
                     return
         self._listened_events = listened_events
