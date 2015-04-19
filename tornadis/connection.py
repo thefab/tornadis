@@ -120,12 +120,14 @@ class Connection(object):
                     errno_from_exception(e) not in _ERRNO_WOULDBLOCK):
                 self.disconnect()
                 raise ConnectionError(e)
+            self.__socket_fileno = self.__socket.fileno()
             self._register_or_update_event_handler()
             yield self._state.get_changed_state_future()
             if not self.is_connected():
                 raise ConnectionError("connection timeout")
         else:
             LOG.debug("connected to %s:%i", self.host, self.port)
+            self.__socket_fileno = self.__socket.fileno()
             self._state.set_connected()
             self._register_or_update_event_handler()
 
@@ -141,13 +143,21 @@ class Connection(object):
         else:
             listened_events = READ_EVENT | ERROR_EVENT
         if self._listened_events == 0:
-            self.__ioloop.add_handler(self.__socket.fileno(),
-                                      self._handle_events,
-                                      listened_events)
+            try:
+                self.__ioloop.add_handler(self.__socket_fileno,
+                                          self._handle_events,
+                                          listened_events)
+            except OSError:
+                self.disconnect()
+                return
         else:
             if self._listened_events != listened_events:
-                self.__ioloop.update_handler(self.__socket.fileno(),
-                                             listened_events)
+                try:
+                    self.__ioloop.update_handler(self.__socket_fileno,
+                                                 listened_events)
+                except OSError:
+                    self.disconnect()
+                    return
         self._listened_events = listened_events
 
     def disconnect(self):
@@ -161,10 +171,11 @@ class Connection(object):
         LOG.debug("disconnecting from %s:%i...", self.host, self.port)
         self.__periodic_callback.stop()
         try:
-            self.__ioloop.remove_handler(self.__socket.fileno())
+            self.__ioloop.remove_handler(self.__socket_fileno)
             self._listened_events = 0
         except:
             pass
+        self.__socket_fileno = -1
         try:
             self.__socket.close()
         except:
