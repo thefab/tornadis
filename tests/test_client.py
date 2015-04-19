@@ -72,3 +72,15 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         self.assertEquals(res2, "PONG")
         yield c.disconnect()
         yield c2.disconnect()
+
+    @tornado.testing.gen_test
+    def test_client_close_connection(self):
+        c = Client(return_connection_error=True)
+        yield c.connect()
+        connection = c._Client__connection
+        socket = connection._Connection__socket
+        socket.close()
+        res = yield c.call("PING")
+        self.assertTrue(isinstance(res, ConnectionError))
+        self.assertFalse(c.is_connected())
+        yield c.disconnect()
