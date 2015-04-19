@@ -116,7 +116,7 @@ class Client(object):
             a Future object with undetermined result.
         """
         if not self.is_connected():
-            return
+            raise tornado.gen.Return(None)
         try:
             return tornado.gen.Task(self._simple_call, "QUIT")
         except ConnectionError:
