@@ -36,6 +36,8 @@ class Client(object):
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
         subscribed (boolean): True if the client is in subscription mode.
+        autoconnect (boolean): True if the client is in autoconnect mode
+            (and in autoreconnection mode) (default False)
         return_connection_error (boolean): if True, return a ConnectionError
             object if the redis server close the connection. If False, return
             None (default) in that particular case.
@@ -45,6 +47,7 @@ class Client(object):
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
+                 autoconnect=False,
                  return_connection_error=False,
                  ioloop=None):
         """Constructor.
@@ -55,6 +58,8 @@ class Client(object):
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
+            autoconnect (boolean): True if the client is in autoconnect mode
+                (and in autoreconnection mode) (default False)
             return_connection_error (boolean): if True, return a
                 ConnectionError object if the redis server close the
                 connection. If False, return None (default) in that particular
@@ -67,6 +72,7 @@ class Client(object):
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
         self.return_connection_error = return_connection_error
+        self.autoconnect = autoconnect
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
         self.subscribed = False
@@ -188,8 +194,21 @@ class Client(object):
                     result = yield client.call("HSET", "key", "field", "val")
         """
         if not self.is_connected():
-            raise ClientError("you are not connected")
+            if self.autoconnect:
+                # We use this method only when we are not contected
+                # to void performance penaly due to gen.coroutine decorator
+                return self._call_with_autoconnect(*args)
+            else:
+                raise ClientError("you are not connected")
         return self._call(*args)
+
+    @tornado.gen.coroutine
+    def _call_with_autoconnect(self, *args):
+        yield self.connect()
+        if not self.is_connected():
+            raise ClientError("Impossible to autoconnect")
+        res = yield self._call(*args)
+        raise tornado.gen.Return(res)
 
     def async_call(self, *args, **kwargs):
         """Calls a redis command, waits for the reply and call a callback.
@@ -213,11 +232,21 @@ class Client(object):
                     pass
             >>> client.async_call("HSET", "key", "field", "val", callback=cb)
         """
-        if not self.is_connected():
-            raise ClientError("you are not connected")
+        def after_autoconnect_callback(future):
+            if self.is_connected():
+                self._call(*args, **kwargs)
+
         if 'callback' not in kwargs:
             kwargs['callback'] = discard_reply_cb
-        return self._call(*args, **kwargs)
+        if not self.is_connected():
+            if self.autoconnect:
+                connect_future = self.connect()
+                self.__ioloop.add_future(connect_future,
+                                         after_autoconnect_callback)
+            else:
+                raise ClientError("you are not connected")
+        else:
+            self._call(*args, **kwargs)
 
     def _call(self, *args, **kwargs):
         callback = False
