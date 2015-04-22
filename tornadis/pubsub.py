@@ -31,7 +31,10 @@ class PubSubClient(Client):
         subscribed (boolean): True if the client is in subscription mode.
     """
 
-    def call(self, *args, **kwargs):
+    def call(self, *args):
+        raise ClientError("not allowed with PubSubClient object")
+
+    def async_call(self, *args, **kwargs):
         raise ClientError("not allowed with PubSubClient object")
 
     def pubsub_subscribe(self, *args):

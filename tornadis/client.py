@@ -22,6 +22,10 @@ import tornadis
 LOG = logging.getLogger()
 
 
+def discard_reply_cb(reply):
+    pass
+
+
 class Client(object):
     """High level object to interact with redis.
 
@@ -164,32 +168,17 @@ class Client(object):
                 else:
                     break
 
-    def call(self, *args, **kwargs):
-        """Calls a redis command and waits for the reply.
-
-        Following options are available (not part of the redis command itself):
-
-        - callback
-            Function called (with the result as argument) when the
-            future resolves (standard behavior of the tornado.gen.coroutine
-            decorator => do not yield the returned Future when you use a
-            callback argument).
-        - discard_reply
-            If True (default False), don't wait for completion
-            and discard the reply (when it becomes available) => do not
-            yield the returned Future and don't use together with callback
-            option.
+    def call(self, *args):
+        """Calls a redis command and returns a Future of the reply.
 
         Args:
             *args: full redis command as variable length argument list.
-            **kwargs: options as keyword parameters.
 
         Returns:
-            a Future with the decoded redis reply as result.
+            a Future with the decoded redis reply as result (when available)
 
         Raises:
             ClientError: you are not connected.
-            ConnectionError: there are some connection error.
 
         Examples:
 
@@ -197,34 +186,53 @@ class Client(object):
                 def foobar():
                     client = Client()
                     result = yield client.call("HSET", "key", "field", "val")
-
-            >>> client.call("HSET", "key", "field", "val", discard_reply=True)
         """
         if not self.is_connected():
             raise ClientError("you are not connected")
-        discard = False
+        return self._call(*args)
+
+    def async_call(self, *args, **kwargs):
+        """Calls a redis command, waits for the reply and call a callback.
+
+        Following options are available (not part of the redis command itself):
+
+        - callback
+            Function called (with the result as argument) when the result
+            is available. If not set, the reply is silently discarded.
+
+        Args:
+            *args: full redis command as variable length argument list.
+            **kwargs: options as keyword parameters.
+
+        Raises:
+            ClientError: you are not connected.
+
+        Examples:
+
+            >>> def cb(result):
+                    pass
+            >>> client.async_call("HSET", "key", "field", "val", callback=cb)
+        """
+        if not self.is_connected():
+            raise ClientError("you are not connected")
+        if 'callback' not in kwargs:
+            kwargs['callback'] = discard_reply_cb
+        return self._call(*args, **kwargs)
+
+    def _call(self, *args, **kwargs):
         callback = False
-        if 'discard_reply' in kwargs:
-            discard = True
-            kwargs.pop('discard_reply')
         if 'callback' in kwargs:
             callback = True
-            if discard:
-                raise ClientError("Don't use callback and "
-                                  "discard_reply together")
         if len(args) == 1 and isinstance(args[0], Pipeline):
             fn = self._pipelined_call
             arguments = (args[0],)
         else:
             fn = self._simple_call
             arguments = args
-        if discard or callback:
+        if callback:
             fn(*arguments, **kwargs)
         else:
             return tornado.gen.Task(fn, *arguments, **kwargs)
-
-    def _discard_reply(self, reply):
-        pass
 
     def _reply_aggregator(self, callback, replies, reply):
         self._reply_list.append(reply)
@@ -233,13 +241,13 @@ class Client(object):
             self._reply_list = []
 
     def _simple_call(self, *args, **kwargs):
-        callback = kwargs.get('callback', self._discard_reply)
+        callback = kwargs['callback']
         msg = format_args_in_redis_protocol(*args)
         self.__callback_queue.append(callback)
         self.__connection.write(msg)
 
     def _simple_call_with_multiple_replies(self, replies, *args, **kwargs):
-        original_callback = kwargs.get('callback', self._discard_reply)
+        original_callback = kwargs['callback']
         msg = format_args_in_redis_protocol(*args)
         callback = functools.partial(self._reply_aggregator, original_callback,
                                      replies)

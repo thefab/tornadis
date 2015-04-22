@@ -37,18 +37,7 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
     def test_discard(self):
         c = Client()
         yield c.connect()
-        c.call('PING', discard_reply=True)
-        yield c.disconnect()
-
-    @tornado.testing.gen_test
-    def test_discard_and_callback(self):
-        c = Client()
-        yield c.connect()
-        try:
-            c.call('PING', discard_reply=True, callback=lambda x: x)
-            raise Exception("ClientError not raised")
-        except ClientError:
-            pass
+        c.async_call('PING')
         yield c.disconnect()
 
     @tornado.gen.coroutine
