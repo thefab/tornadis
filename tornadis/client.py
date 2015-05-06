@@ -178,13 +178,15 @@ class Client(object):
         """Calls a redis command and returns a Future of the reply.
 
         Args:
-            *args: full redis command as variable length argument list.
+            *args: full redis command as variable length argument list or
+                a Pipeline object (as a single argument).
 
         Returns:
             a Future with the decoded redis reply as result (when available)
 
         Raises:
-            ClientError: you are not connected.
+            ClientError: you are not connected or your Pipeline object is
+                empty.
 
         Examples:
 
@@ -220,11 +222,13 @@ class Client(object):
             is available. If not set, the reply is silently discarded.
 
         Args:
-            *args: full redis command as variable length argument list.
+            *args: full redis command as variable length argument list or
+                a Pipeline object (as a single argument).
             **kwargs: options as keyword parameters.
 
         Raises:
-            ClientError: you are not connected.
+            ClientError: you are not connected or your Pipeline object is
+                empty.
 
         Examples:
 
@@ -254,7 +258,10 @@ class Client(object):
             callback = True
         if len(args) == 1 and isinstance(args[0], Pipeline):
             fn = self._pipelined_call
-            arguments = (args[0],)
+            pipeline = args[0]
+            if pipeline.number_of_stacked_calls == 0:
+                raise ClientError("empty pipeline")
+            arguments = (pipeline,)
         else:
             fn = self._simple_call
             arguments = args
