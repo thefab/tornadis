@@ -6,6 +6,7 @@ import tornado.ioloop
 
 from tornadis.client import Client
 from tornadis.pipeline import Pipeline
+from tornadis.exceptions import ClientError
 from support import test_redis_or_raise_skiptest
 
 
@@ -29,4 +30,16 @@ class PipelineTestCase(tornado.testing.AsyncTestCase):
         self.assertEquals(len(res), 2)
         self.assertEquals(res[0], b'PONG')
         self.assertEquals(res[1], b'PONG')
+        yield c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_empty_pipeline(self):
+        c = Client()
+        yield c.connect()
+        p = Pipeline()
+        try:
+            yield c.call(p)
+            raise Exception("not raised ClientError")
+        except ClientError:
+            pass
         yield c.disconnect()
