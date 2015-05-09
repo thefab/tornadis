@@ -20,6 +20,7 @@
 - coroutine friendly
 - production ready (timeouts, connection pool, error management)
 - nearly all redis features (pipeline, pubsub, standard commands)
+- autoconnection, autoreconnection
 
 ## Full documentation
 

@@ -4,9 +4,11 @@
 import tornado.testing
 import tornado.ioloop
 import tornado
+import toro
+import functools
 
 from tornadis.client import Client
-from tornadis.exceptions import ClientError, ConnectionError
+from tornadis.exceptions import ConnectionError
 from support import test_redis_or_raise_skiptest
 
 
@@ -31,6 +33,26 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         yield c.connect()
         res = yield c.call('PING')
         self.assertEquals(res, b"PONG")
+        yield c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_autoconnect_future(self):
+        c = Client(autoconnect=True)
+        res = yield c.call('PING')
+        self.assertEquals(res, b"PONG")
+        yield c.disconnect()
+
+    def _test_autoconnect_callback_cb(self, condition, result):
+        self.assertEquals(result, b"PONG")
+        condition.notify()
+
+    @tornado.testing.gen_test
+    def test_autoconnect_callback(self):
+        condition = toro.Condition()
+        c = Client(autoconnect=True)
+        cb = functools.partial(self._test_autoconnect_callback_cb, condition)
+        c.async_call('PING', callback=cb)
+        yield condition.wait()
         yield c.disconnect()
 
     @tornado.testing.gen_test
