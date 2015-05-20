@@ -100,3 +100,13 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         self.assertFalse(client1 == client3)
         c.release_client(client3)
         c.destroy()
+
+    @tornado.testing.gen_test
+    def test_autoclose(self):
+        c = ClientPool(max_size=5, client_timeout=1, autoclose=True)
+        client1 = yield c.get_connected_client()
+        self.assertTrue(client1.is_connected())
+        c.release_client(client1)
+        yield tornado.gen.sleep(3)
+        self.assertFalse(client1.is_connected())
+        c.destroy()

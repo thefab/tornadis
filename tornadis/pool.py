@@ -5,6 +5,7 @@
 # See the LICENSE file for more information.
 
 import tornado.gen
+import tornado.ioloop
 import toro
 import functools
 from collections import deque
@@ -21,26 +22,43 @@ class ClientPool(object):
         max_size (int): max size of the pool (-1 means "no limit").
         client_timeout (int): timeout in seconds of a connection released
             to the pool (-1 means "no timeout").
+        autoclose (boolean): automatically disconnect released connections
+            with lifetime > client_timeout (test made every
+            client_timeout/10 seconds).
         client_kwargs (dict): Client constructor arguments
     """
 
-    def __init__(self, max_size=-1, client_timeout=-1, **client_kwargs):
+    def __init__(self, max_size=-1, client_timeout=-1, autoclose=False,
+                 **client_kwargs):
         """Constructor.
 
         Args:
             max_size (int): max size of the pool (-1 means "no limit").
             client_timeout (int): timeout in seconds of a connection released
                 to the pool (-1 means "no timeout").
+            autoclose (boolean): automatically disconnect released connections
+                with lifetime > client_timeout (test made every
+                client_timeout/10 seconds).
             client_kwargs (dict): Client constructor arguments.
         """
         self.max_size = max_size
         self.client_timeout = client_timeout
         self.client_kwargs = client_kwargs
+        self.__ioloop = client_kwargs.get('ioloop',
+                                          tornado.ioloop.IOLoop.instance())
+        self.autoclose = autoclose
         self.__pool = deque()
         if self.max_size != -1:
             self.__sem = toro.Semaphore(self.max_size)
         else:
             self.__sem = None
+        self.__autoclose_periodic = None
+        if self.autoclose and self.client_timeout > 0:
+            every = int(self.client_timeout) * 100
+            self.__autoclose_periodic = \
+                tornado.ioloop.PeriodicCallback(self._autoclose, every,
+                                                io_loop=self.__ioloop)
+            self.__autoclose_periodic.start()
 
     @tornado.gen.coroutine
     def get_connected_client(self):
@@ -70,6 +88,19 @@ class ClientPool(object):
             client = self._make_client()
             yield client.connect()
         raise tornado.gen.Return(client)
+
+    def _autoclose(self):
+        newpool = deque()
+        try:
+            while True:
+                client = self.__pool.popleft()
+                if client.is_connected():
+                    if self._is_expired_client(client):
+                        client.disconnect()
+                    else:
+                        newpool.append(client)
+        except IndexError:
+            self.__pool = newpool
 
     def _is_expired_client(self, client):
         if self.client_timeout != -1 and client.is_connected():
