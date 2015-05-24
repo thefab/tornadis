@@ -30,7 +30,7 @@ class PipelineTestCase(tornado.testing.AsyncTestCase):
         self.assertEquals(len(res), 2)
         self.assertEquals(res[0], b'PONG')
         self.assertEquals(res[1], b'PONG')
-        yield c.disconnect()
+        c.disconnect()
 
     @tornado.testing.gen_test
     def test_empty_pipeline(self):
@@ -42,4 +42,4 @@ class PipelineTestCase(tornado.testing.AsyncTestCase):
             raise Exception("not raised ClientError")
         except ClientError:
             pass
-        yield c.disconnect()
+        c.disconnect()

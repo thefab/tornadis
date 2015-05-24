@@ -7,7 +7,7 @@ import toro
 import errno
 import socket
 from tornadis.connection import Connection
-from tornadis.exceptions import ConnectionError, ClientError
+from tornadis.exceptions import ConnectionError
 from tornadis.utils import format_args_in_redis_protocol
 from support import test_redis_or_raise_skiptest
 import hiredis
@@ -146,12 +146,8 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_bad_connect(self):
         c = Connection(self._read_cb, self._close_cb, host="bad_host__")
-        try:
-            yield c.connect()
-        except ConnectionError:
-            pass
-        else:
-            raise("ConnectionError must be raised")
+        res = yield c.connect()
+        self.assertFalse(res)
         c.disconnect()
 
     @tornado.testing.gen_test
@@ -160,12 +156,8 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         socket.socket = functools.partial(fake_socket_constructor,
                                           FakeSocketObject1)
         c = Connection(self._read_cb, self._close_cb, connect_timeout=2)
-        try:
-            yield c.connect()
-        except ConnectionError:
-            pass
-        else:
-            raise("ConnectionError must be raised")
+        res = yield c.connect()
+        self.assertFalse(res)
         socket.socket = orig_constructor
 
     @tornado.gen.coroutine
@@ -231,19 +223,8 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_already_connected(self):
         c = Connection(self._read_cb, self._close_cb, connect_timeout=2)
-        yield c.connect()
-        try:
-            yield c.connect()
-            raise Exception("ClientError not raised")
-        except ClientError:
-            pass
+        res = yield c.connect()
+        self.assertTrue(res)
+        res = yield c.connect()
+        self.assertTrue(res)
         c.disconnect()
-
-    @tornado.testing.gen_test
-    def test_not_connected(self):
-        c = Connection(self._read_cb, self._close_cb, connect_timeout=2)
-        try:
-            c.write(b"foo")
-            raise Exception("ClientError not raised")
-        except ClientError:
-            pass

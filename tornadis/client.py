@@ -37,19 +37,14 @@ class Client(object):
         connect_timeout (int): timeout (in seconds) for connecting.
         subscribed (boolean): True if the client is in subscription mode.
         autoconnect (boolean): True if the client is in autoconnect mode
-            (and in autoreconnection mode) (default False)
-        return_connection_error (boolean): if True, return a ConnectionError
-            object if the redis server close the connection. If False, return
-            None (default) in that particular case.
+            (and in autoreconnection mode) (default True).
     """
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 autoconnect=False,
-                 return_connection_error=False,
-                 ioloop=None):
+                 autoconnect=True, ioloop=None):
         """Constructor.
 
         Args:
@@ -59,11 +54,7 @@ class Client(object):
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
             autoconnect (boolean): True if the client is in autoconnect mode
-                (and in autoreconnection mode) (default False)
-            return_connection_error (boolean): if True, return a
-                ConnectionError object if the redis server close the
-                connection. If False, return None (default) in that particular
-                case.
+                (and in autoreconnection mode) (default True).
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -71,7 +62,6 @@ class Client(object):
         self.read_page_size = read_page_size
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
-        self.return_connection_error = return_connection_error
         self.autoconnect = autoconnect
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
@@ -96,15 +86,13 @@ class Client(object):
     def connect(self):
         """Connects the client object to redis.
 
-        Returns:
-            a Future object with no result.
+        It's safe to use this method even if you are already connected.
 
-        Raises:
-            ConnectionError: when there is a connection error.
-            ClientError: when you are already connected.
+        Returns:
+            a Future object with True as result if the connection was ok.
         """
         if self.is_connected():
-            raise ClientError("you are already connected")
+            raise tornado.gen.Return(True)
         cb1 = self._read_callback
         cb2 = self._close_callback
         self.__callback_queue = collections.deque()
@@ -121,17 +109,11 @@ class Client(object):
         """Disconnects the client object from redis.
 
         It's safe to use this method even if you are already disconnected.
-
-        Returns:
-            a Future object with undetermined result.
         """
         if not self.is_connected():
-            raise tornado.gen.Return(None)
-        try:
-            return tornado.gen.Task(self._simple_call, "QUIT")
-        except ConnectionError:
-            if self.__connection is not None:
-                self.__connection.disconnect()
+            return
+        if self.__connection is not None:
+            self.__connection.disconnect()
 
     def _close_callback(self):
         """Callback called when redis closed the connection.
@@ -142,10 +124,7 @@ class Client(object):
         while True:
             try:
                 callback = self.__callback_queue.popleft()
-                if self.return_connection_error:
-                    callback(ConnectionError("closed connection"))
-                else:
-                    callback(None)
+                callback(ConnectionError("closed connection"))
             except IndexError:
                 break
 
@@ -183,11 +162,11 @@ class Client(object):
             **kwargs: internal private options (do not use).
 
         Returns:
-            a Future with the decoded redis reply as result (when available)
+            a Future with the decoded redis reply as result (when available) or
+                a ConnectionError object in case of connection error.
 
         Raises:
-            ClientError: you are not connected or your Pipeline object is
-                empty.
+            ClientError: your Pipeline object is empty.
 
         Examples:
 
@@ -202,14 +181,16 @@ class Client(object):
                 # to void performance penaly due to gen.coroutine decorator
                 return self._call_with_autoconnect(*args, **kwargs)
             else:
-                raise ClientError("you are not connected")
+                error = ConnectionError("you are not connected and "
+                                        "autoconnect=False")
+                return tornado.gen.maybe_future(error)
         return self._call(*args, **kwargs)
 
     @tornado.gen.coroutine
     def _call_with_autoconnect(self, *args, **kwargs):
         yield self.connect()
         if not self.is_connected():
-            raise ClientError("Impossible to autoconnect")
+            raise tornado.gen.Return(ConnectionError("impossible to connect"))
         res = yield self._call(*args, **kwargs)
         raise tornado.gen.Return(res)
 
@@ -220,7 +201,9 @@ class Client(object):
 
         - callback
             Function called (with the result as argument) when the result
-            is available. If not set, the reply is silently discarded.
+            is available. If not set, the reply is silently discarded. In
+            case of connection errors, the callback is called with a
+            ConnectionError object as argument.
 
         Args:
             *args: full redis command as variable length argument list or
@@ -228,8 +211,7 @@ class Client(object):
             **kwargs: options as keyword parameters.
 
         Raises:
-            ClientError: you are not connected or your Pipeline object is
-                empty.
+            ClientError: your Pipeline object is empty.
 
         Examples:
 
@@ -249,7 +231,9 @@ class Client(object):
                 self.__ioloop.add_future(connect_future,
                                          after_autoconnect_callback)
             else:
-                raise ClientError("you are not connected")
+                error = ConnectionError("you are not connected and "
+                                        "autoconnect=False")
+                kwargs['callback'](error)
         else:
             self._call(*args, **kwargs)
 

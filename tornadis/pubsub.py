@@ -48,16 +48,10 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the subscribe is ok.
 
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
         Examples:
 
             >>> yield client.pubsub_subscribe("channel1", "channel2")
         """
-        if not self.is_connected():
-            raise ClientError("you are not connected")
         return self._pubsub_subscribe(b"SUBSCRIBE", *args)
 
     def pubsub_psubscribe(self, *args):
@@ -70,10 +64,6 @@ class PubSubClient(Client):
 
         Returns:
             Future: Future with True as result if the subscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
 
         Examples:
 
@@ -103,10 +93,6 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the unsubscribe is ok.
 
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
-
         Examples:
 
             >>> yield client.pubsub_unsubscribe("channel1", "channel2")
@@ -123,10 +109,6 @@ class PubSubClient(Client):
 
         Returns:
             Future: Future with True as result if the unsubscribe is ok.
-
-        Raises:
-            ConnectionError: there is a connection error.
-            ClientError: you are not connected.
 
         Examples:
 
@@ -155,10 +137,10 @@ class PubSubClient(Client):
             deadline (int): max number of seconds to wait (None => no timeout)
 
         Returns:
-            Future with the popped message as result (or None if timeout)
+            Future with the popped message as result (or None if timeout
+                or ConnectionError object in case of connection errors).
 
         Raises:
-            ConnectionError: when there is a connection error
             ClientError: when you are not subscribed to anything
         """
         if not self.subscribed:
@@ -178,6 +160,4 @@ class PubSubClient(Client):
                     reply = self._reply_list.pop(0)
                 except IndexError:
                     pass
-        if isinstance(reply, ConnectionError):
-            raise reply
         raise tornado.gen.Return(reply)

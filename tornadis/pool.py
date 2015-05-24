@@ -86,9 +86,6 @@ class ClientPool(object):
 
         Returns:
             A Future object with connected Client instance as a result.
-
-        Raises:
-            ConnectionError: when there is a connection error.
         """
         if self.__sem is not None:
             yield self.__sem.acquire()
@@ -185,7 +182,6 @@ class ClientPool(object):
                 (-1 means all clients if pool max_size > -1)
 
         Raises:
-            ConnectionError: when there is a connection error.
             ClientError: when size == -1 and pool max_size == -1
         """
         if size == -1 and self.max_size == -1:

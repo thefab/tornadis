@@ -9,7 +9,7 @@ import tornado.iostream
 import tornado.gen
 from tornado.util import errno_from_exception
 from tornadis.write_buffer import WriteBuffer
-from tornadis.exceptions import ConnectionError, ClientError
+from tornadis.exceptions import ConnectionError
 from tornadis.state import ConnectionState
 from tornado.ioloop import IOLoop
 import tornadis
@@ -89,25 +89,16 @@ class Connection(object):
         """Returns True if the object is connected."""
         return self._state.is_connected()
 
-    def _ensure_connected(self):
-        if self.is_connected() is False:
-            raise ClientError("you are not connected")
-
-    def _ensure_not_connected(self):
-        if self.is_connected() is True:
-            raise ClientError("you are already connected")
-
     @tornado.gen.coroutine
     def connect(self):
         """Connects the object to the host:port.
 
         Returns:
-            Future: a Future object with no specific result.
-
-        Raises:
-            ConnectionError: when there is a connection error.
+            Future: a Future object with True as result if the connection
+                process was ok.
         """
-        self._ensure_not_connected()
+        if self.is_connected() or self.is_connecting():
+            raise tornado.gen.Return(True)
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__socket.setblocking(0)
         self.__periodic_callback.start()
@@ -119,17 +110,20 @@ class Connection(object):
             if (errno_from_exception(e) not in _ERRNO_INPROGRESS and
                     errno_from_exception(e) not in _ERRNO_WOULDBLOCK):
                 self.disconnect()
-                raise ConnectionError(e)
+                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                raise tornado.gen.Return(False)
             self.__socket_fileno = self.__socket.fileno()
             self._register_or_update_event_handler()
             yield self._state.get_changed_state_future()
             if not self.is_connected():
-                raise ConnectionError("connection timeout")
+                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                raise tornado.gen.Return(False)
         else:
             LOG.debug("connected to %s:%i", self.host, self.port)
             self.__socket_fileno = self.__socket.fileno()
             self._state.set_connected()
             self._register_or_update_event_handler()
+        raise tornado.gen.Return(True)
 
     def _on_every_second(self):
         if self.is_connecting():
@@ -267,7 +261,6 @@ class Connection(object):
             data (str or WriteBuffer): string (or WriteBuffer) to write to
                 the host:port.
         """
-        self._ensure_connected()
         if isinstance(data, WriteBuffer):
             self._write_buffer.append(data)
         else:
