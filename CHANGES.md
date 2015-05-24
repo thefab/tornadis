@@ -1,9 +1,25 @@
 # CHANGES
 
+## (future) Release 0.4.0
+
+- new get_client_nowait method (on pool objects)
+- autoclose feature (on pool objects)
+- autoconnect is True by default
+- return_connection_error behavior is True by default
+- BREAKING CHANGE: no ConnectionError raised anymore, the ConnectionError
+  is now returned (and not raised) in case of connection error.
+- BREAKING CHANGE: return_connection_error option does not exist anymore
+- BREAKING CHANGE: disconnect does not return a Future anymore !
+- BREAKING CHANGE: connect() on an alreaydy connected Client object does not
+  raise ClientError exception anymore.
+- BREAKING CHANGE: connect() returns a Future with True or False as result 
+  (depending on the connection success)
+- BREAKING CHANGE: TornadisException object is not public anymore
+
 ## Release 0.3.0
 
 - autoconnect feature (#8) (see autoconnect option)
-- bugfix: behaviour with empty pipeline (#10)
+- bugfix: behavior with empty pipeline (#10)
 - BREAKING CHANGE: split call() method in call() (for futures) and
   async_call() (for regular callbacks) 
 - BREAKING CHANGE: fix some problems in case of connection drop
