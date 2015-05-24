@@ -7,7 +7,6 @@
 import tornado.ioloop
 import tornado.gen
 import hiredis
-import logging
 import collections
 import functools
 import toro
@@ -18,8 +17,6 @@ from tornadis.utils import format_args_in_redis_protocol
 from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
 import tornadis
-
-LOG = logging.getLogger()
 
 
 def discard_reply_cb(reply):
