@@ -58,6 +58,24 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.destroy()
 
     @tornado.testing.gen_test
+    def test_get_client_nowait1(self):
+        c = ClientPool()
+        client = c.get_client_nowait()
+        self.assertTrue(isinstance(client, Client))
+        c.release_client(client)
+        c.destroy()
+
+    @tornado.testing.gen_test
+    def test_get_client_nowait2(self):
+        c = ClientPool(max_size=1)
+        client1 = c.get_client_nowait()
+        self.assertTrue(isinstance(client1, Client))
+        client2 = c.get_client_nowait()
+        self.assertTrue(client2 is None)
+        c.release_client(client1)
+        c.destroy()
+
+    @tornado.testing.gen_test
     def test_get_client_context_manager(self):
         c = ClientPool(max_size=1)
         with (yield c.connected_client()) as client:

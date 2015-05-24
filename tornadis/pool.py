@@ -7,12 +7,15 @@
 import tornado.gen
 import tornado.ioloop
 import toro
+import logging
 import functools
 from collections import deque
 
 from tornadis.client import Client
 from tornadis.utils import ContextManagerFuture
 from tornadis.exceptions import ClientError
+
+LOG = logging.getLogger(__name__)
 
 
 class ClientPool(object):
@@ -60,6 +63,20 @@ class ClientPool(object):
                                                 io_loop=self.__ioloop)
             self.__autoclose_periodic.start()
 
+    def _get_client_from_pool_or_make_it(self):
+        try:
+            while True:
+                client = self.__pool.popleft()
+                if client.is_connected():
+                    if self._is_expired_client(client):
+                        client.disconnect()
+                        continue
+                    break
+        except IndexError:
+            client = self._make_client()
+            return (True, client)
+        return (False, client)
+
     @tornado.gen.coroutine
     def get_connected_client(self):
         """Gets a connected Client object.
@@ -76,18 +93,27 @@ class ClientPool(object):
         if self.__sem is not None:
             yield self.__sem.acquire()
         client = None
-        try:
-            while True:
-                client = self.__pool.popleft()
-                if client.is_connected():
-                    if self._is_expired_client(client):
-                        client.disconnect()
-                        continue
-                    break
-        except IndexError:
-            client = self._make_client()
-            yield client.connect()
+        newly_created, client = self._get_client_from_pool_or_make_it()
+        if newly_created:
+            res = yield client.connect()
+            if not(res):
+                LOG.warning("can't connect to %s:%i", client.host, client.port)
         raise tornado.gen.Return(client)
+
+    def get_client_nowait(self):
+        """Gets a Client object (not necessary connected).
+
+        If max_size is reached, this method will return None (and won't block).
+
+        Returns:
+            A Client instance (not necessary connected) as result (or None).
+        """
+        if self.__sem is not None:
+            if self.__sem.locked():
+                return None
+            self.__sem.acquire()
+        _, client = self._get_client_from_pool_or_make_it()
+        return client
 
     def _autoclose(self):
         newpool = deque()
