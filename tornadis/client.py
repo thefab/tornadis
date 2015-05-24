@@ -174,12 +174,13 @@ class Client(object):
                 else:
                     break
 
-    def call(self, *args):
+    def call(self, *args, **kwargs):
         """Calls a redis command and returns a Future of the reply.
 
         Args:
             *args: full redis command as variable length argument list or
                 a Pipeline object (as a single argument).
+            **kwargs: internal private options (do not use).
 
         Returns:
             a Future with the decoded redis reply as result (when available)
@@ -199,17 +200,17 @@ class Client(object):
             if self.autoconnect:
                 # We use this method only when we are not contected
                 # to void performance penaly due to gen.coroutine decorator
-                return self._call_with_autoconnect(*args)
+                return self._call_with_autoconnect(*args, **kwargs)
             else:
                 raise ClientError("you are not connected")
-        return self._call(*args)
+        return self._call(*args, **kwargs)
 
     @tornado.gen.coroutine
-    def _call_with_autoconnect(self, *args):
+    def _call_with_autoconnect(self, *args, **kwargs):
         yield self.connect()
         if not self.is_connected():
             raise ClientError("Impossible to autoconnect")
-        res = yield self._call(*args)
+        res = yield self._call(*args, **kwargs)
         raise tornado.gen.Return(res)
 
     def async_call(self, *args, **kwargs):
@@ -263,8 +264,12 @@ class Client(object):
                 raise ClientError("empty pipeline")
             arguments = (pipeline,)
         else:
-            fn = self._simple_call
-            arguments = args
+            if "__multiple_replies" in kwargs:
+                fn = self._simple_call_with_multiple_replies
+                arguments = tuple([kwargs["__multiple_replies"]] + list(args))
+            else:
+                fn = self._simple_call
+                arguments = args
         if callback:
             fn(*arguments, **kwargs)
         else:

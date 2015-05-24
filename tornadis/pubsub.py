@@ -31,7 +31,7 @@ class PubSubClient(Client):
         subscribed (boolean): True if the client is in subscription mode.
     """
 
-    def call(self, *args):
+    def call(self, *args, **kwargs):
         raise ClientError("not allowed with PubSubClient object")
 
     def async_call(self, *args, **kwargs):
@@ -83,11 +83,11 @@ class PubSubClient(Client):
 
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
-        fn = self._simple_call_with_multiple_replies
-        results = yield tornado.gen.Task(fn, len(args), command, *args)
+        results = yield Client.call(self, command, *args,
+                                    __multiple_replies=len(args))
         for reply in results:
-            if len(reply) != 3 or reply[0].lower() != command.lower() or \
-               reply[2] == 0:
+            if isinstance(reply, ConnectionError) or len(reply) != 3 or \
+                    reply[0].lower() != command.lower() or reply[2] == 0:
                 raise tornado.gen.Return(False)
         self.subscribed = True
         raise tornado.gen.Return(True)
@@ -137,13 +137,13 @@ class PubSubClient(Client):
 
     @tornado.gen.coroutine
     def _pubsub_unsubscribe(self, command, *args):
-        fn = self._simple_call_with_multiple_replies
-        results = yield tornado.gen.Task(fn, len(args), command, *args)
+        results = yield Client.call(self, command, *args,
+                                    __multiple_replies=len(args))
         for reply in results:
-            if reply is None or len(reply) != 3 or \
-               reply[0].lower() != command.lower():
+            if isinstance(reply, ConnectionError) or len(reply) != 3 or \
+                    reply[0].lower() != command.lower():
                 raise tornado.gen.Return(False)
-            if reply is not None and reply[2] == 0:
+            if reply[2] == 0:
                 self.subscribed = False
         raise tornado.gen.Return(True)
 
