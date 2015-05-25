@@ -6,7 +6,6 @@ import tornadis
 def pipeline_coroutine():
     # Let's get a connected client
     client = tornadis.Client()
-    yield client.connect()
 
     # Let's make a pipeline object to stack commands inside
     pipeline = tornadis.Pipeline()
@@ -26,13 +25,5 @@ def pipeline_coroutine():
     client.disconnect()
 
 
-def stop_loop(future):
-    exception = future.exception()
-    if exception is not None:
-        raise(exception)
-    loop.stop()
-
-
 loop = tornado.ioloop.IOLoop.instance()
-loop.add_future(pipeline_coroutine(), stop_loop)
-loop.start()
+loop.run_sync(pipeline_coroutine)

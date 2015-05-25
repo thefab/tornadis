@@ -12,12 +12,10 @@ class HelloHandler(RequestHandler):
 
     @tornado.gen.coroutine
     def get(self):
-        pong = "PONG"
         with (yield POOL.connected_client()) as client:
             reply = yield client.call("PING")
-            reply = yield client.call("PING")
-            reply = yield client.call("PING")
-        self.write("Hello, %s" % pong)
+            if not isinstance(reply, tornadis.ConnectionError):
+                self.write("Hello, %s" % reply)
         self.finish()
 
 

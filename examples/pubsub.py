@@ -6,7 +6,6 @@ import tornadis
 def pubsub_coroutine():
     # Let's get a connected client
     client = tornadis.PubSubClient()
-    yield client.connect()
 
     # Let's "psubscribe" to a pattern
     yield client.pubsub_psubscribe("foo*")
@@ -28,16 +27,8 @@ def pubsub_coroutine():
             break
 
     # Let's disconnect
-    yield client.disconnect()
-
-
-def stop_loop(future=None):
-    excep = future.exception()
-    if excep is not None:
-        raise(excep)
-    loop.stop()
+    client.disconnect()
 
 
 loop = tornado.ioloop.IOLoop.instance()
-loop.add_future(pubsub_coroutine(), stop_loop)
-loop.start()
+loop.run_sync(pubsub_coroutine)

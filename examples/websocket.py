@@ -19,7 +19,6 @@ class WSHandler(WebSocketHandler):
     @tornado.gen.coroutine
     def initialize(self):
         self.redis = tornadis.Client()
-        yield self.redis.connect()
         loop = tornado.ioloop.IOLoop.current()
         loop.add_callback(self.watch_redis)
 
