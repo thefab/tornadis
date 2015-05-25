@@ -1,6 +1,6 @@
 # CHANGES
 
-## (future) Release 0.4.0
+## Release 0.4.0
 
 - new get_client_nowait method (on pool objects)
 - autoclose feature (on pool objects)
