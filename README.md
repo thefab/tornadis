@@ -44,7 +44,6 @@ class GetHandler(RequestHandler):
     @tornado.gen.coroutine
     def get(self):
         client = tornadis.Client(port=6379)
-        yield client.connect()
         yield client.call("BLPOP", "empty", 3)
         self.finish()
 
@@ -79,7 +78,6 @@ def log(message):
 def time_consuming_function():
     log("blocking pop")
     client = tornadis.Client(port=6379)
-    yield client.connect()
     yield client.call("BLPOP", "empty", 3)
     log("done waiting")
 
