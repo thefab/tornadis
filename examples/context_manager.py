@@ -18,14 +18,6 @@ def multiple_ping_redis():
     yield [ping_redis(i) for i in range(0, 100)]
 
 
-def stop_loop(future):
-    excep = future.exception()
-    if excep is not None:
-        raise(excep)
-    loop = tornado.ioloop.IOLoop.instance()
-    loop.stop()
-
-
 pool = tornadis.ClientPool(max_size=5)
 loop = tornado.ioloop.IOLoop.instance()
 loop.run_sync(multiple_ping_redis)
