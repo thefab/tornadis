@@ -7,7 +7,6 @@ import toro
 import errno
 import socket
 from tornadis.connection import Connection
-from tornadis.exceptions import ConnectionError
 from tornadis.utils import format_args_in_redis_protocol
 from support import test_redis_or_raise_skiptest
 import hiredis
@@ -215,8 +214,8 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
         c.write(data1)
         # Wait a short moment while the server closes the socket
         yield tornado.gen.sleep(.0001)
-        self.assertRaises(ConnectionError, c._handle_write)
-        self.assertRaises(ConnectionError, c._handle_read)
+        c._handle_write()
+        c._handle_read()
         self.assertFalse(c.is_connected())
         c.disconnect()
 

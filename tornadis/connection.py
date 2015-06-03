@@ -9,7 +9,6 @@ import tornado.iostream
 import tornado.gen
 from tornado.util import errno_from_exception
 from tornadis.write_buffer import WriteBuffer
-from tornadis.exceptions import ConnectionError
 from tornadis.state import ConnectionState
 from tornado.ioloop import IOLoop
 import tornadis
@@ -184,8 +183,7 @@ class Connection(object):
             if err != 0:
                 LOG.debug("connecting error in _handle_events")
                 self.disconnect()
-                raise ConnectionError("Connect error: %s" %
-                                      errno.errorcode[err])
+                return
             self._state.set_connected()
             LOG.debug("connected to %s:%i", self.host, self.port)
         if not self.is_connected():
@@ -221,7 +219,7 @@ class Connection(object):
                         break
                     else:
                         self.disconnect()
-                        raise ConnectionError("can't write to socket: %s" % e)
+                        return
                 else:
                     LOG.debug("%i bytes written to the socket", size)
                     if size < len(data):
@@ -246,7 +244,6 @@ class Connection(object):
                 return None
             else:
                 self.disconnect()
-                raise ConnectionError("error during socket.recv: %s" % e)
 
     def write(self, data):
         """Buffers some data to be sent to the host:port in a non blocking way.
