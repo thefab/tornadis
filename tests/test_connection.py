@@ -40,6 +40,9 @@ class FakeSocketObject(object):
     def getsockopt(self, *args, **kwargs):
         return self.__socket.getsockopt(*args, **kwargs)
 
+    def setsockopt(self, *args, **kwargs):
+        return self.__socket.setsockopt(*args, **kwargs)
+
     def recv(self, *args, **kwargs):
         return self.__socket.recv(*args, **kwargs)
 
@@ -123,6 +126,12 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
                 self.reply_queue.put_nowait(reply)
             else:
                 break
+
+    @tornado.testing.gen_test
+    def test_init_with_tcp_nodelay(self):
+        c = Connection(self._read_cb, self._close_cb, tcp_nodelay=True)
+        yield c.connect()
+        c.disconnect()
 
     @tornado.testing.gen_test
     def test_write(self):

@@ -44,6 +44,7 @@ class Connection(object):
         read_page_size (int): page size for reading.
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
+        tcp_nodelay (boolean): set TCP_NODELAY on socket.
     """
 
     def __init__(self, read_callback, close_callback,
@@ -52,7 +53,7 @@ class Connection(object):
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 ioloop=None):
+                 tcp_nodelay=False, ioloop=None):
         """Constructor.
 
         Args:
@@ -63,6 +64,7 @@ class Connection(object):
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
+            tcp_nodelay (boolean): set TCP_NODELAY on socket.
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -77,6 +79,7 @@ class Connection(object):
         self.read_page_size = read_page_size
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
+        self.tcp_nodelay = tcp_nodelay
         self._write_buffer = WriteBuffer()
         self._listened_events = 0
 
@@ -100,6 +103,8 @@ class Connection(object):
             raise tornado.gen.Return(True)
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.__socket.setblocking(0)
+        if self.tcp_nodelay:
+            self.__socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.__periodic_callback.start()
         try:
             LOG.debug("connecting to %s:%i...", self.host, self.port)
