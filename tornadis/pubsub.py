@@ -6,7 +6,6 @@
 
 import tornado.ioloop
 import tornado.gen
-import toro
 import logging
 
 from tornadis.client import Client
@@ -148,12 +147,9 @@ class PubSubClient(Client):
                               "pubsub_pop_message")
         reply = None
         try:
-            try:
-                reply = self._reply_list.pop(0)
-            except IndexError:
-                yield self._condition.wait(deadline=deadline)
-        except toro.Timeout:
-            pass
+            reply = self._reply_list.pop(0)
+        except IndexError:
+            yield self._condition.wait(deadline=deadline)
         else:
             if reply is None:
                 try:

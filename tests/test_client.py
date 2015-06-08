@@ -4,7 +4,6 @@
 import tornado.testing
 import tornado.ioloop
 import tornado
-import toro
 import functools
 
 from tornadis.client import Client
@@ -48,7 +47,7 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
 
     @tornado.testing.gen_test
     def test_autoconnect_callback(self):
-        condition = toro.Condition()
+        condition = tornado.locks.Condition()
         c = Client(autoconnect=True)
         cb = functools.partial(self._test_autoconnect_callback_cb, condition)
         c.async_call('PING', callback=cb)

@@ -6,7 +6,7 @@
 
 import tornado.gen
 import tornado.ioloop
-import toro
+import tornado.locks
 import logging
 import functools
 from collections import deque
@@ -52,7 +52,7 @@ class ClientPool(object):
         self.autoclose = autoclose
         self.__pool = deque()
         if self.max_size != -1:
-            self.__sem = toro.Semaphore(self.max_size)
+            self.__sem = tornado.locks.Semaphore(self.max_size)
         else:
             self.__sem = None
         self.__autoclose_periodic = None

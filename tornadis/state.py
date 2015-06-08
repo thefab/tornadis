@@ -5,7 +5,7 @@
 # See the LICENSE file for more information.
 
 import tornado.gen
-import toro
+import tornado.locks
 import datetime
 
 
@@ -17,7 +17,7 @@ class ConnectionState(object):
     __condition = None
 
     def __init__(self):
-        self.__condition = toro.Condition()
+        self.__condition = tornado.locks.Condition()
         self.set_disconnected()
 
     def is_connected(self):

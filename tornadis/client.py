@@ -6,10 +6,10 @@
 
 import tornado.ioloop
 import tornado.gen
+import tornado.locks
 import hiredis
 import collections
 import functools
-import toro
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
@@ -71,7 +71,7 @@ class Client(object):
         # Used for normal clients
         self.__callback_queue = None
         # Used for subscribed clients
-        self._condition = toro.Condition()
+        self._condition = tornado.locks.Condition()
         self._reply_list = None
 
     def is_connected(self):
