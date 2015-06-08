@@ -1,5 +1,12 @@
 # CHANGES
 
+## Release 0.5.0
+
+- add tcp_nodelay option
+- cleaning of dead code
+- no ConnectionError raised anymore (in any case)
+- copyright update
+
 ## Release 0.4.0
 
 - new get_client_nowait method (on pool objects)
