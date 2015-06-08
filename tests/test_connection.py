@@ -9,6 +9,7 @@ import socket
 from tornadis.connection import Connection
 from tornadis.utils import format_args_in_redis_protocol
 from support import test_redis_or_raise_skiptest
+from support import test_redis_uds_or_raise_skiptest
 import hiredis
 import functools
 import random
@@ -97,23 +98,13 @@ def fake_socket_constructor(cls, *args, **kwargs):
     return cls(*args, **kwargs)
 
 
-class ConnectionTestCase(tornado.testing.AsyncTestCase):
+class AbstractConnectionTestCase(tornado.testing.AsyncTestCase):
 
     def setUp(self):
-        test_redis_or_raise_skiptest()
-        super(ConnectionTestCase, self).setUp()
+        test_redis_uds_or_raise_skiptest()
+        super(AbstractConnectionTestCase, self).setUp()
         self.reader = hiredis.Reader()
         self.reply_queue = toro.Queue()
-        self.replies = []
-
-    def get_new_ioloop(self):
-        return tornado.ioloop.IOLoop.instance()
-
-    @tornado.testing.gen_test
-    def test_init(self):
-        c = Connection(self._read_cb, self._close_cb)
-        yield c.connect()
-        c.disconnect()
 
     def _close_cb(self):
         pass
@@ -126,6 +117,40 @@ class ConnectionTestCase(tornado.testing.AsyncTestCase):
                 self.reply_queue.put_nowait(reply)
             else:
                 break
+
+
+class UDSConnectionTestCase(AbstractConnectionTestCase):
+
+    def setUp(self):
+        test_redis_uds_or_raise_skiptest()
+        super(UDSConnectionTestCase, self).setUp()
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @tornado.testing.gen_test
+    def test_init(self):
+        c = Connection(self._read_cb, self._close_cb,
+                       unix_domain_socket="/tmp/redis.sock")
+        yield c.connect()
+        c.disconnect()
+
+
+class ConnectionTestCase(AbstractConnectionTestCase):
+
+    def setUp(self):
+        test_redis_or_raise_skiptest()
+        super(ConnectionTestCase, self).setUp()
+        self.replies = []
+
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+
+    @tornado.testing.gen_test
+    def test_init(self):
+        c = Connection(self._read_cb, self._close_cb)
+        yield c.connect()
+        c.disconnect()
 
     @tornado.testing.gen_test
     def test_init_with_tcp_nodelay(self):

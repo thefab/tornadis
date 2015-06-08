@@ -18,6 +18,9 @@ def get_parameters():
                         default="127.0.0.1")
     parser.add_argument('-p', '--port', help="Server port (default 6379)",
                         default=6379)
+    parser.add_argument('-u', '--unix_domain_socket',
+                        help="path to a unix socket to connect to (if set "
+                        ", overrides host/port parameters)")
     parser.add_argument('-a', '--password', help="Password for Redis Auth")
     parser.add_argument('-c', '--clients',
                         help="Number of parallel connections (default 5)",
@@ -60,7 +63,12 @@ class Benchmark(object):
 
     @tornado.gen.coroutine
     def multiple_set(self, client_number):
-        client = tornadis.Client()
+        uds = self.params.unix_domain_socket
+        client = tornadis.Client(host=self.params.hostname,
+                                 port=self.params.port,
+                                 unix_domain_socket=uds,
+                                 autoconnect=False,
+                                 tcp_nodelay=True)
         print_("Connect client", client_number)
         yield client.connect()
         print_("Client", client_number, "connected")
@@ -101,7 +109,12 @@ class Benchmark(object):
 
     @tornado.gen.coroutine
     def pipelined_multiple_set(self, client_number):
-        client = tornadis.Client()
+        uds = self.params.unix_domain_socket
+        client = tornadis.Client(host=self.params.hostname,
+                                 port=self.params.port,
+                                 unix_domain_socket=uds,
+                                 autoconnect=False,
+                                 tcp_nodelay=True)
         print_("Connect client", client_number)
         yield client.connect()
         print_("Client", client_number, "connected")
