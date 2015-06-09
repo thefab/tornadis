@@ -29,6 +29,8 @@ class Client(object):
     Attributes:
         host (string): the host name to connect to.
         port (int): the port to connect to.
+        unix_domain_socket (string): path to a unix socket to connect to
+            (if set, overrides host/port parameters).
         read_page_size (int): page size for reading.
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
@@ -39,6 +41,7 @@ class Client(object):
     """
 
     def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
+                 unix_domain_socket=None,
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
@@ -48,6 +51,8 @@ class Client(object):
         Args:
             host (string): the host name to connect to.
             port (int): the port to connect to.
+            unix_domain_socket (string): path to a unix socket to connect to
+                (if set, overrides host/port parameters).
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
@@ -58,6 +63,7 @@ class Client(object):
         """
         self.host = host
         self.port = port
+        self.unix_domain_socket = unix_domain_socket
         self.read_page_size = read_page_size
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
@@ -98,8 +104,11 @@ class Client(object):
         self.__callback_queue = collections.deque()
         self._reply_list = []
         self.__reader = hiredis.Reader()
+        uds = self.unix_domain_socket
         self.__connection = Connection(cb1, cb2, host=self.host,
-                                       port=self.port, ioloop=self.__ioloop,
+                                       port=self.port,
+                                       unix_domain_socket=uds,
+                                       ioloop=self.__ioloop,
                                        read_page_size=self.read_page_size,
                                        write_page_size=self.write_page_size,
                                        connect_timeout=self.connect_timeout,
