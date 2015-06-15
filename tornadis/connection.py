@@ -5,6 +5,7 @@
 # See the LICENSE file for more information.
 
 import socket
+import os
 import tornado.iostream
 import tornado.gen
 from tornado.util import errno_from_exception
@@ -41,6 +42,8 @@ class Connection(object):
     Attributes:
         host (string): the host name to connect to.
         port (int): the port to connect to.
+        unix_domain_socket (string): path to a unix socket to connect to
+            (if set, overrides host/port parameters).
         read_page_size (int): page size for reading.
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
@@ -51,7 +54,7 @@ class Connection(object):
 
     def __init__(self, read_callback, close_callback,
                  host=tornadis.DEFAULT_HOST,
-                 port=tornadis.DEFAULT_PORT,
+                 port=tornadis.DEFAULT_PORT, unix_domain_socket=None,
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
@@ -63,6 +66,8 @@ class Connection(object):
             close_callback: callback called when the connection is closed.
             host (string): the host name to connect to.
             port (int): the port to connect to.
+            unix_domain_socket (string): path to a unix socket to connect to
+                (if set, overrides host/port parameters).
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
@@ -73,6 +78,7 @@ class Connection(object):
         """
         self.host = host
         self.port = port
+        self.unix_domain_socket = unix_domain_socket
         self._state = ConnectionState()
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000,
@@ -87,6 +93,11 @@ class Connection(object):
         self.aggressive_write = aggressive_write
         self._write_buffer = WriteBuffer()
         self._listened_events = 0
+
+    def _redis_server(self):
+        if self.unix_domain_socket:
+            return self.unix_domain_socket
+        return "%s:%i" % (self.host, self.port)
 
     def is_connecting(self):
         """Returns True if the object is connecting."""
@@ -106,29 +117,40 @@ class Connection(object):
         """
         if self.is_connected() or self.is_connecting():
             raise tornado.gen.Return(True)
-        self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if self.unix_domain_socket is None:
+            self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if self.tcp_nodelay:
+                self.__socket.setsockopt(socket.IPPROTO_TCP,
+                                         socket.TCP_NODELAY, 1)
+        else:
+            if not os.path.exists(self.unix_domain_socket):
+                LOG.warning("can't connect to %s, file does not exist",
+                            self.unix_domain_socket)
+                raise tornado.gen.Return(False)
+            self.__socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.__socket.setblocking(0)
-        if self.tcp_nodelay:
-            self.__socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.__periodic_callback.start()
         try:
-            LOG.debug("connecting to %s:%i...", self.host, self.port)
+            LOG.debug("connecting to %s...", self._redis_server())
             self._state.set_connecting()
-            self.__socket.connect((self.host, self.port))
+            if self.unix_domain_socket is None:
+                self.__socket.connect((self.host, self.port))
+            else:
+                self.__socket.connect(self.unix_domain_socket)
         except socket.error as e:
             if (errno_from_exception(e) not in _ERRNO_INPROGRESS and
                     errno_from_exception(e) not in _ERRNO_WOULDBLOCK):
                 self.disconnect()
-                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                LOG.warning("can't connect to %s", self._redis_server())
                 raise tornado.gen.Return(False)
             self.__socket_fileno = self.__socket.fileno()
             self._register_or_update_event_handler()
             yield self._state.get_changed_state_future()
             if not self.is_connected():
-                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                LOG.warning("can't connect to %s", self._redis_server())
                 raise tornado.gen.Return(False)
         else:
-            LOG.debug("connected to %s:%i", self.host, self.port)
+            LOG.debug("connected to %s", self._redis_server())
             self.__socket_fileno = self.__socket.fileno()
             self._state.set_connected()
             self._register_or_update_event_handler()
@@ -170,7 +192,7 @@ class Connection(object):
         """
         if not self.is_connected() and not self.is_connecting():
             return
-        LOG.debug("disconnecting from %s:%i...", self.host, self.port)
+        LOG.debug("disconnecting from %s...", self._redis_server())
         self.__periodic_callback.stop()
         try:
             self.__ioloop.remove_handler(self.__socket_fileno)
@@ -184,7 +206,7 @@ class Connection(object):
             pass
         self._state.set_disconnected()
         self._close_callback()
-        LOG.debug("disconnected from %s:%i", self.host, self.port)
+        LOG.debug("disconnected from %s", self._redis_server())
 
     def _handle_events(self, fd, event):
         if self.is_connecting():
@@ -194,7 +216,7 @@ class Connection(object):
                 self.disconnect()
                 return
             self._state.set_connected()
-            LOG.debug("connected to %s:%i", self.host, self.port)
+            LOG.debug("connected to %s", self._redis_server())
         if not self.is_connected():
             return
         if event & self.__ioloop.READ:
