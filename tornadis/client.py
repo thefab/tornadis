@@ -33,6 +33,8 @@ class Client(object):
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
         tcp_nodelay (boolean): set TCP_NODELAY on socket.
+        aggressive_write (boolean): try to minimize write latency over
+            global throughput (default False).
         subscribed (boolean): True if the client is in subscription mode.
         autoconnect (boolean): True if the client is in autoconnect mode
             (and in autoreconnection mode) (default True).
@@ -42,7 +44,8 @@ class Client(object):
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 tcp_nodelay=False, autoconnect=True, ioloop=None):
+                 tcp_nodelay=False, aggressive_write=False, autoconnect=True,
+                 ioloop=None):
         """Constructor.
 
         Args:
@@ -52,6 +55,8 @@ class Client(object):
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
             tcp_nodelay (boolean): set TCP_NODELAY on socket.
+            aggressive_write (boolean): try to minimize write latency over
+                global throughput (default False).
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
             ioloop (IOLoop): the tornado ioloop to use.
@@ -62,6 +67,7 @@ class Client(object):
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
         self.tcp_nodelay = tcp_nodelay
+        self.aggressive_write = aggressive_write
         self.autoconnect = autoconnect
         self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
@@ -103,7 +109,8 @@ class Client(object):
                                        read_page_size=self.read_page_size,
                                        write_page_size=self.write_page_size,
                                        connect_timeout=self.connect_timeout,
-                                       tcp_nodelay=self.tcp_nodelay)
+                                       tcp_nodelay=self.tcp_nodelay,
+                                       aggressive_write=self.aggressive_write)
         return self.__connection.connect()
 
     def disconnect(self):

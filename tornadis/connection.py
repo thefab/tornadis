@@ -45,6 +45,8 @@ class Connection(object):
         write_page_size (int): page size for writing.
         connect_timeout (int): timeout (in seconds) for connecting.
         tcp_nodelay (boolean): set TCP_NODELAY on socket.
+        aggressive_write (boolean): try to minimize write latency over
+            global throughput (default False).
     """
 
     def __init__(self, read_callback, close_callback,
@@ -53,7 +55,7 @@ class Connection(object):
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 tcp_nodelay=False, ioloop=None):
+                 tcp_nodelay=False, aggressive_write=False, ioloop=None):
         """Constructor.
 
         Args:
@@ -65,6 +67,8 @@ class Connection(object):
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
             tcp_nodelay (boolean): set TCP_NODELAY on socket.
+            aggressive_write (boolean): try to minimize write latency over
+                global throughput (default False).
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -80,6 +84,7 @@ class Connection(object):
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
         self.tcp_nodelay = tcp_nodelay
+        self.aggressive_write = aggressive_write
         self._write_buffer = WriteBuffer()
         self._listened_events = 0
 
@@ -143,9 +148,8 @@ class Connection(object):
         if self._listened_events == 0:
             try:
                 self.__ioloop.add_handler(self.__socket_fileno,
-                                          self._handle_events,
-                                          listened_events)
-            except (OSError, IOError):
+                                          self._handle_events, listened_events)
+            except (OSError, IOError, ValueError):
                 self.disconnect()
                 return
         else:
@@ -153,7 +157,7 @@ class Connection(object):
                 try:
                     self.__ioloop.update_handler(self.__socket_fileno,
                                                  listened_events)
-                except (OSError, IOError):
+                except (OSError, IOError, ValueError):
                     self.disconnect()
                     return
         self._listened_events = listened_events
@@ -268,5 +272,7 @@ class Connection(object):
         else:
             if len(data) > 0:
                 self._write_buffer.append(data)
+        if self.aggressive_write:
+            self._handle_write()
         if self._write_buffer._total_length > 0:
             self._register_or_update_event_handler(write=True)
