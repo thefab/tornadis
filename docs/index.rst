@@ -158,6 +158,9 @@ API
  .. autoclass:: Client
      :members:
 
+ .. autoclass:: Connection
+     :members:
+
  .. autoclass:: Pipeline
      :members:
 

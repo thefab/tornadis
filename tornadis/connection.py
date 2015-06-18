@@ -40,6 +40,8 @@ class Connection(object):
     """Low level connection object.
 
     Attributes:
+        read_callback: callback called when there is something to read.
+        close_callback: callback called when the connection is closed.
         host (string): the host name to connect to.
         port (int): the port to connect to.
         unix_domain_socket (string): path to a unix socket to connect to
@@ -59,23 +61,6 @@ class Connection(object):
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
                  tcp_nodelay=False, aggressive_write=False, ioloop=None):
-        """Constructor.
-
-        Args:
-            read_callback: callback called when there is something to read.
-            close_callback: callback called when the connection is closed.
-            host (string): the host name to connect to.
-            port (int): the port to connect to.
-            unix_domain_socket (string): path to a unix socket to connect to
-                (if set, overrides host/port parameters).
-            read_page_size (int): page size for reading.
-            write_page_size (int): page size for writing.
-            connect_timeout (int): timeout (in seconds) for connecting.
-            tcp_nodelay (boolean): set TCP_NODELAY on socket.
-            aggressive_write (boolean): try to minimize write latency over
-                global throughput (default False).
-            ioloop (IOLoop): the tornado ioloop to use.
-        """
         self.host = host
         self.port = port
         self.unix_domain_socket = unix_domain_socket

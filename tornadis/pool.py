@@ -33,17 +33,6 @@ class ClientPool(object):
 
     def __init__(self, max_size=-1, client_timeout=-1, autoclose=False,
                  **client_kwargs):
-        """Constructor.
-
-        Args:
-            max_size (int): max size of the pool (-1 means "no limit").
-            client_timeout (int): timeout in seconds of a connection released
-                to the pool (-1 means "no timeout").
-            autoclose (boolean): automatically disconnect released connections
-                with lifetime > client_timeout (test made every
-                client_timeout/10 seconds).
-            client_kwargs (dict): Client constructor arguments.
-        """
         self.max_size = max_size
         self.client_timeout = client_timeout
         self.client_kwargs = client_kwargs
