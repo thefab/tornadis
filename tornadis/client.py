@@ -4,7 +4,6 @@
 # This file is part of tornadis library released under the MIT license.
 # See the LICENSE file for more information.
 
-import tornado.ioloop
 import tornado.gen
 import hiredis
 import collections
@@ -16,7 +15,6 @@ from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol
 from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
-import tornadis
 
 
 def discard_reply_cb(reply):
@@ -27,55 +25,32 @@ class Client(object):
     """High level object to interact with redis.
 
     Attributes:
-        host (string): the host name to connect to.
-        port (int): the port to connect to.
-        unix_domain_socket (string): path to a unix socket to connect to
-            (if set, overrides host/port parameters).
-        read_page_size (int): page size for reading.
-        write_page_size (int): page size for writing.
-        connect_timeout (int): timeout (in seconds) for connecting.
-        tcp_nodelay (boolean): set TCP_NODELAY on socket.
-        aggressive_write (boolean): try to minimize write latency over
-            global throughput (default False).
         subscribed (boolean): True if the client is in subscription mode.
         autoconnect (boolean): True if the client is in autoconnect mode
             (and in autoreconnection mode) (default True).
     """
 
-    def __init__(self, host=tornadis.DEFAULT_HOST, port=tornadis.DEFAULT_PORT,
-                 unix_domain_socket=None,
-                 read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
-                 write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
-                 connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 tcp_nodelay=False, aggressive_write=False, autoconnect=True,
-                 ioloop=None):
+    def __init__(self, autoconnect=True, **connection_kwargs):
         """Constructor.
 
         Args:
-            host (string): the host name to connect to.
-            port (int): the port to connect to.
-            unix_domain_socket (string): path to a unix socket to connect to
-                (if set, overrides host/port parameters).
-            read_page_size (int): page size for reading.
-            write_page_size (int): page size for writing.
-            connect_timeout (int): timeout (in seconds) for connecting.
-            tcp_nodelay (boolean): set TCP_NODELAY on socket.
-            aggressive_write (boolean): try to minimize write latency over
-                global throughput (default False).
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
-            ioloop (IOLoop): the tornado ioloop to use.
+            **connection_kwargs: Connection object kwargs :
+                host (string): the host name to connect to.
+                port (int): the port to connect to.
+                unix_domain_socket (string): path to a unix socket to connect
+                    to (if set, overrides host/port parameters).
+                read_page_size (int): page size for reading.
+                write_page_size (int): page size for writing.
+                connect_timeout (int): timeout (in seconds) for connecting.
+                tcp_nodelay (boolean): set TCP_NODELAY on socket.
+                aggressive_write (boolean): try to minimize write latency over
+                    global throughput (default False).
+                ioloop (IOLoop): the tornado ioloop to use.
         """
-        self.host = host
-        self.port = port
-        self.unix_domain_socket = unix_domain_socket
-        self.read_page_size = read_page_size
-        self.write_page_size = write_page_size
-        self.connect_timeout = connect_timeout
-        self.tcp_nodelay = tcp_nodelay
-        self.aggressive_write = aggressive_write
+        self.connection_kwargs = connection_kwargs
         self.autoconnect = autoconnect
-        self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         self.__connection = None
         self.subscribed = False
         self.__connection = None
@@ -110,16 +85,8 @@ class Client(object):
         self.__callback_queue = collections.deque()
         self._reply_list = []
         self.__reader = hiredis.Reader()
-        uds = self.unix_domain_socket
-        self.__connection = Connection(cb1, cb2, host=self.host,
-                                       port=self.port,
-                                       unix_domain_socket=uds,
-                                       ioloop=self.__ioloop,
-                                       read_page_size=self.read_page_size,
-                                       write_page_size=self.write_page_size,
-                                       connect_timeout=self.connect_timeout,
-                                       tcp_nodelay=self.tcp_nodelay,
-                                       aggressive_write=self.aggressive_write)
+        kwargs = self.connection_kwargs
+        self.__connection = Connection(cb1, cb2, **kwargs)
         return self.__connection.connect()
 
     def disconnect(self):
@@ -245,8 +212,8 @@ class Client(object):
         if not self.is_connected():
             if self.autoconnect:
                 connect_future = self.connect()
-                self.__ioloop.add_future(connect_future,
-                                         after_autoconnect_callback)
+                cb = after_autoconnect_callback
+                self.__connection._ioloop.add_future(connect_future, cb)
             else:
                 error = ConnectionError("you are not connected and "
                                         "autoconnect=False")
