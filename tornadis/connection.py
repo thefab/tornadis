@@ -80,9 +80,9 @@ class Connection(object):
         self.port = port
         self.unix_domain_socket = unix_domain_socket
         self._state = ConnectionState()
-        self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
+        self._ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000,
-                                             self.__ioloop)
+                                             self._ioloop)
         self.__periodic_callback = cb
         self._read_callback = read_callback
         self._close_callback = close_callback
@@ -169,16 +169,16 @@ class Connection(object):
             listened_events = READ_EVENT | ERROR_EVENT
         if self._listened_events == 0:
             try:
-                self.__ioloop.add_handler(self.__socket_fileno,
-                                          self._handle_events, listened_events)
+                self._ioloop.add_handler(self.__socket_fileno,
+                                         self._handle_events, listened_events)
             except (OSError, IOError, ValueError):
                 self.disconnect()
                 return
         else:
             if self._listened_events != listened_events:
                 try:
-                    self.__ioloop.update_handler(self.__socket_fileno,
-                                                 listened_events)
+                    self._ioloop.update_handler(self.__socket_fileno,
+                                                listened_events)
                 except (OSError, IOError, ValueError):
                     self.disconnect()
                     return
@@ -195,7 +195,7 @@ class Connection(object):
         LOG.debug("disconnecting from %s...", self._redis_server())
         self.__periodic_callback.stop()
         try:
-            self.__ioloop.remove_handler(self.__socket_fileno)
+            self._ioloop.remove_handler(self.__socket_fileno)
             self._listened_events = 0
         except:
             pass
@@ -219,15 +219,15 @@ class Connection(object):
             LOG.debug("connected to %s", self._redis_server())
         if not self.is_connected():
             return
-        if event & self.__ioloop.READ:
+        if event & self._ioloop.READ:
             self._handle_read()
         if not self.is_connected():
             return
-        if event & self.__ioloop.WRITE:
+        if event & self._ioloop.WRITE:
             self._handle_write()
         if not self.is_connected():
             return
-        if event & self.__ioloop.ERROR:
+        if event & self._ioloop.ERROR:
             LOG.debug("unknown socket error")
             self.disconnect()
 
