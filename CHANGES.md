@@ -1,5 +1,11 @@
 # CHANGES
 
+## Release 0.6.0
+
+- add aggressive_write option
+- (potential) important API change if you use positional arguments in the
+    Client constructor => please use named arguments now
+
 ## Release 0.5.0
 
 - add tcp_nodelay option
