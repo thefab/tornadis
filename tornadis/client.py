@@ -22,15 +22,27 @@ def discard_reply_cb(reply):
 
 
 class Client(object):
-    """High level object to interact with redis.
-
-    Attributes:
-        autoconnect (boolean): True if the client is in autoconnect mode
-            (and in autoreconnection mode) (default True).
-        connection_kwargs: Connection object kwargs
-    """
+    """High level object to interact with redis."""
 
     def __init__(self, autoconnect=True, **connection_kwargs):
+        """Constructor.
+
+        Args:
+            autoconnect (boolean): True if the client is in autoconnect mode
+                (and in autoreconnection mode) (default True).
+            **connection_kwargs: Connection object kwargs :
+                host (string): the host name to connect to.
+                port (int): the port to connect to.
+                unix_domain_socket (string): path to a unix socket to connect
+                    to (if set, overrides host/port parameters).
+                read_page_size (int): page size for reading.
+                write_page_size (int): page size for writing.
+                connect_timeout (int): timeout (in seconds) for connecting.
+                tcp_nodelay (boolean): set TCP_NODELAY on socket.
+                aggressive_write (boolean): try to minimize write latency over
+                    global throughput (default False).
+                ioloop (IOLoop): the tornado ioloop to use.
+        """
         self.connection_kwargs = connection_kwargs
         self.autoconnect = autoconnect
         self.__connection = None
@@ -42,6 +54,10 @@ class Client(object):
         # Used for subscribed clients
         self._condition = toro.Condition()
         self._reply_list = None
+
+    @property
+    def title(self):
+        return self.__connection._redis_server()
 
     def is_connected(self):
         """Returns True is the client is connected to redis.
