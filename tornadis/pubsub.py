@@ -141,7 +141,7 @@ class PubSubClient(Client):
         try:
             reply = self._reply_list.pop(0)
         except IndexError:
-            yield self._condition.wait(deadline=deadline)
+            yield self._condition.wait(timeout=deadline)
         else:
             if reply is None:
                 try:
