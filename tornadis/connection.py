@@ -5,6 +5,7 @@
 # See the LICENSE file for more information.
 
 import socket
+import os
 import tornado.iostream
 import tornado.gen
 from tornado.util import errno_from_exception
@@ -36,24 +37,15 @@ ERROR_EVENT = IOLoop.ERROR
 
 
 class Connection(object):
-    """Low level connection object.
-
-    Attributes:
-        host (string): the host name to connect to.
-        port (int): the port to connect to.
-        read_page_size (int): page size for reading.
-        write_page_size (int): page size for writing.
-        connect_timeout (int): timeout (in seconds) for connecting.
-        tcp_nodelay (boolean): set TCP_NODELAY on socket.
-    """
+    """Low level connection object."""
 
     def __init__(self, read_callback, close_callback,
                  host=tornadis.DEFAULT_HOST,
-                 port=tornadis.DEFAULT_PORT,
+                 port=tornadis.DEFAULT_PORT, unix_domain_socket=None,
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 tcp_nodelay=False, ioloop=None):
+                 tcp_nodelay=False, aggressive_write=False, ioloop=None):
         """Constructor.
 
         Args:
@@ -61,18 +53,23 @@ class Connection(object):
             close_callback: callback called when the connection is closed.
             host (string): the host name to connect to.
             port (int): the port to connect to.
+            unix_domain_socket (string): path to a unix socket to connect to
+                (if set, overrides host/port parameters).
             read_page_size (int): page size for reading.
             write_page_size (int): page size for writing.
             connect_timeout (int): timeout (in seconds) for connecting.
             tcp_nodelay (boolean): set TCP_NODELAY on socket.
+            aggressive_write (boolean): try to minimize write latency over
+                global throughput (default False).
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
         self.port = port
+        self.unix_domain_socket = unix_domain_socket
         self._state = ConnectionState()
-        self.__ioloop = ioloop or tornado.ioloop.IOLoop.instance()
+        self._ioloop = ioloop or tornado.ioloop.IOLoop.instance()
         cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000,
-                                             self.__ioloop)
+                                             self._ioloop)
         self.__periodic_callback = cb
         self._read_callback = read_callback
         self._close_callback = close_callback
@@ -80,8 +77,14 @@ class Connection(object):
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
         self.tcp_nodelay = tcp_nodelay
+        self.aggressive_write = aggressive_write
         self._write_buffer = WriteBuffer()
         self._listened_events = 0
+
+    def _redis_server(self):
+        if self.unix_domain_socket:
+            return self.unix_domain_socket
+        return "%s:%i" % (self.host, self.port)
 
     def is_connecting(self):
         """Returns True if the object is connecting."""
@@ -101,29 +104,40 @@ class Connection(object):
         """
         if self.is_connected() or self.is_connecting():
             raise tornado.gen.Return(True)
-        self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if self.unix_domain_socket is None:
+            self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if self.tcp_nodelay:
+                self.__socket.setsockopt(socket.IPPROTO_TCP,
+                                         socket.TCP_NODELAY, 1)
+        else:
+            if not os.path.exists(self.unix_domain_socket):
+                LOG.warning("can't connect to %s, file does not exist",
+                            self.unix_domain_socket)
+                raise tornado.gen.Return(False)
+            self.__socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.__socket.setblocking(0)
-        if self.tcp_nodelay:
-            self.__socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.__periodic_callback.start()
         try:
-            LOG.debug("connecting to %s:%i...", self.host, self.port)
+            LOG.debug("connecting to %s...", self._redis_server())
             self._state.set_connecting()
-            self.__socket.connect((self.host, self.port))
+            if self.unix_domain_socket is None:
+                self.__socket.connect((self.host, self.port))
+            else:
+                self.__socket.connect(self.unix_domain_socket)
         except socket.error as e:
             if (errno_from_exception(e) not in _ERRNO_INPROGRESS and
                     errno_from_exception(e) not in _ERRNO_WOULDBLOCK):
                 self.disconnect()
-                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                LOG.warning("can't connect to %s", self._redis_server())
                 raise tornado.gen.Return(False)
             self.__socket_fileno = self.__socket.fileno()
             self._register_or_update_event_handler()
             yield self._state.get_changed_state_future()
             if not self.is_connected():
-                LOG.warning("can't connect to %s:%i", self.host, self.port)
+                LOG.warning("can't connect to %s", self._redis_server())
                 raise tornado.gen.Return(False)
         else:
-            LOG.debug("connected to %s:%i", self.host, self.port)
+            LOG.debug("connected to %s", self._redis_server())
             self.__socket_fileno = self.__socket.fileno()
             self._state.set_connected()
             self._register_or_update_event_handler()
@@ -142,18 +156,17 @@ class Connection(object):
             listened_events = READ_EVENT | ERROR_EVENT
         if self._listened_events == 0:
             try:
-                self.__ioloop.add_handler(self.__socket_fileno,
-                                          self._handle_events,
-                                          listened_events)
-            except (OSError, IOError):
+                self._ioloop.add_handler(self.__socket_fileno,
+                                         self._handle_events, listened_events)
+            except (OSError, IOError, ValueError):
                 self.disconnect()
                 return
         else:
             if self._listened_events != listened_events:
                 try:
-                    self.__ioloop.update_handler(self.__socket_fileno,
-                                                 listened_events)
-                except (OSError, IOError):
+                    self._ioloop.update_handler(self.__socket_fileno,
+                                                listened_events)
+                except (OSError, IOError, ValueError):
                     self.disconnect()
                     return
         self._listened_events = listened_events
@@ -166,10 +179,10 @@ class Connection(object):
         """
         if not self.is_connected() and not self.is_connecting():
             return
-        LOG.debug("disconnecting from %s:%i...", self.host, self.port)
+        LOG.debug("disconnecting from %s...", self._redis_server())
         self.__periodic_callback.stop()
         try:
-            self.__ioloop.remove_handler(self.__socket_fileno)
+            self._ioloop.remove_handler(self.__socket_fileno)
             self._listened_events = 0
         except:
             pass
@@ -180,7 +193,7 @@ class Connection(object):
             pass
         self._state.set_disconnected()
         self._close_callback()
-        LOG.debug("disconnected from %s:%i", self.host, self.port)
+        LOG.debug("disconnected from %s", self._redis_server())
 
     def _handle_events(self, fd, event):
         if self.is_connecting():
@@ -190,18 +203,18 @@ class Connection(object):
                 self.disconnect()
                 return
             self._state.set_connected()
-            LOG.debug("connected to %s:%i", self.host, self.port)
+            LOG.debug("connected to %s", self._redis_server())
         if not self.is_connected():
             return
-        if event & self.__ioloop.READ:
+        if event & self._ioloop.READ:
             self._handle_read()
         if not self.is_connected():
             return
-        if event & self.__ioloop.WRITE:
+        if event & self._ioloop.WRITE:
             self._handle_write()
         if not self.is_connected():
             return
-        if event & self.__ioloop.ERROR:
+        if event & self._ioloop.ERROR:
             LOG.debug("unknown socket error")
             self.disconnect()
 
@@ -268,5 +281,7 @@ class Connection(object):
         else:
             if len(data) > 0:
                 self._write_buffer.append(data)
+        if self.aggressive_write:
+            self._handle_write()
         if self._write_buffer._total_length > 0:
             self._register_or_update_event_handler(write=True)
