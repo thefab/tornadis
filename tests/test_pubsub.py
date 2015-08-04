@@ -6,6 +6,7 @@ import tornado.ioloop
 
 from tornadis.pubsub import PubSubClient
 from tornadis.client import Client
+from tornadis.exceptions import ClientError
 from support import test_redis_or_raise_skiptest
 
 
@@ -66,4 +67,27 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
         yield c.pubsub_punsubscribe("bar1*")
         yield c.pubsub_punsubscribe("bar2*")
         self.assertFalse(c.subscribed)
+        c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_issue17(self):
+        c = PubSubClient()
+        yield c.connect()
+        res = yield c.pubsub_subscribe("foo")
+        self.assertTrue(res)
+        self.assertTrue(c.subscribed)
+        res = yield c.pubsub_unsubscribe()
+        self.assertTrue(res)
+        self.assertFalse(c.subscribed)
+        c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_empty_subscribe(self):
+        c = PubSubClient()
+        yield c.connect()
+        try:
+            yield c.pubsub_subscribe()
+            raise Exception("ClientError not raised")
+        except ClientError:
+            pass
         c.disconnect()
