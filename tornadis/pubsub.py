@@ -40,6 +40,9 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the subscribe is ok.
 
+        Raises:
+            ClientError: if you don't provide at least one channel
+
         Examples:
 
             >>> yield client.pubsub_subscribe("channel1", "channel2")
@@ -57,6 +60,9 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the subscribe is ok.
 
+        Raises:
+            ClientError: if you don't provide at least one pattern
+
         Examples:
 
             >>> yield client.pubsub_psubscribe("channel*", "foo*")
@@ -65,6 +71,8 @@ class PubSubClient(Client):
 
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
+        if len(args) == 0:
+            raise ClientError("you must provide at least one argument")
         results = yield Client.call(self, command, *args,
                                     __multiple_replies=len(args))
         for reply in results:
@@ -111,8 +119,13 @@ class PubSubClient(Client):
 
     @tornado.gen.coroutine
     def _pubsub_unsubscribe(self, command, *args):
+        if len(args) == 0:
+            # see https://github.com/thefab/tornadis/issues/17
+            args_len = 1
+        else:
+            args_len = len(args)
         results = yield Client.call(self, command, *args,
-                                    __multiple_replies=len(args))
+                                    __multiple_replies=args_len)
         for reply in results:
             if isinstance(reply, ConnectionError) or len(reply) != 3 or \
                     reply[0].lower() != command.lower():
