@@ -3,6 +3,7 @@
 
 import tornado.testing
 import tornado.ioloop
+import tornado.gen
 
 from tornadis.pubsub import PubSubClient
 from tornadis.client import Client
@@ -18,6 +19,15 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
 
     def get_new_ioloop(self):
         return tornado.ioloop.IOLoop.instance()
+
+    @tornado.gen.coroutine
+    def publish(self, c2):
+        yield tornado.gen.sleep(1)
+        yield c2.call("PUBLISH", "null", "value0")
+        yield c2.call("PUBLISH", "foo1", "value1")
+        yield c2.call("PUBLISH", "foo2", "value2")
+        yield c2.call("PUBLISH", "bar111", "value3")
+        yield c2.call("PUBLISH", "bar222", "value4")
 
     @tornado.testing.gen_test
     def test_pubsub(self):
@@ -41,11 +51,7 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
             pass
         res = yield c.pubsub_psubscribe("bar1*", "bar2*")
         self.assertTrue(res)
-        yield c2.call("PUBLISH", "null", "value0")
-        yield c2.call("PUBLISH", "foo1", "value1")
-        yield c2.call("PUBLISH", "foo2", "value2")
-        yield c2.call("PUBLISH", "bar111", "value3")
-        yield c2.call("PUBLISH", "bar222", "value4")
+        tornado.ioloop.IOLoop.instance().add_future(self.publish(c2), None)
         msg = yield c.pubsub_pop_message()
         self.assertEquals(msg[2], b"value1")
         msg = yield c.pubsub_pop_message()
