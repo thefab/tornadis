@@ -153,12 +153,13 @@ class PubSubClient(Client):
         reply = None
         try:
             reply = self._reply_list.pop(0)
+            raise tornado.gen.Return(reply)
         except IndexError:
-            yield self._condition.wait(timeout=deadline)
-        else:
-            if reply is None:
-                try:
-                    reply = self._reply_list.pop(0)
-                except IndexError:
-                    pass
+            pass
+        yield self._condition.wait(timeout=deadline)
+        try:
+            reply = self._reply_list.pop(0)
+        except IndexError:
+            pass
         raise tornado.gen.Return(reply)
+
