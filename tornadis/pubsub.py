@@ -7,12 +7,9 @@
 import tornado.ioloop
 import tornado.gen
 import toro
-import logging
 
 from tornadis.client import Client
 from tornadis.exceptions import ConnectionError, ClientError
-
-LOG = logging.getLogger()
 
 
 class PubSubClient(Client):
