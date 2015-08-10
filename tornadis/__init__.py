@@ -15,7 +15,8 @@ from tornadis.client import Client
 from tornadis.pubsub import PubSubClient
 from tornadis.pool import ClientPool
 from tornadis.pipeline import Pipeline
-from tornadis.exceptions import ConnectionError, ClientError
+from tornadis.exceptions import ConnectionError, ClientError, TornadisException
 
 __all__ = ['Client', 'ClientPool', 'Pipeline',
-           'ConnectionError', 'ClientError', 'PubSubClient', 'WriteBuffer']
+           'ConnectionError', 'ClientError', 'TornadisException',
+           'PubSubClient', 'WriteBuffer']

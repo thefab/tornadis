@@ -5,7 +5,7 @@ logging.basicConfig(level=logging.CRITICAL)
 
 
 def ping_callback(result):
-    if not isinstance(result, tornadis.ConnectionError):
+    if not isinstance(result, tornadis.TornadisException):
         print result
 
 
