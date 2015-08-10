@@ -7,7 +7,7 @@ import tornado
 import functools
 
 from tornadis.client import Client
-from tornadis.exceptions import ConnectionError
+from tornadis.exceptions import ConnectionError, ClientError
 from support import test_redis_or_raise_skiptest
 
 
@@ -32,6 +32,14 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         yield c.connect()
         res = yield c.call('PING')
         self.assertEquals(res, b"PONG")
+        c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_reply_error(self):
+        c = Client()
+        yield c.connect()
+        res = yield c.call('BADCOMMAND')
+        self.assertTrue(isinstance(res, ClientError))
         c.disconnect()
 
     @tornado.testing.gen_test

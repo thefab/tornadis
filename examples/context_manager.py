@@ -9,7 +9,7 @@ def ping_redis(num):
         # it will be automatically released to the pool thanks to the
         # "with" keyword
         reply = yield client.call("PING")
-        if not isinstance(reply, tornadis.ConnectionError):
+        if not isinstance(reply, tornadis.TornadisException):
             print("reply #%i : %s" % (num, reply))
 
 

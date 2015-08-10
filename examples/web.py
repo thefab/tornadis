@@ -14,7 +14,7 @@ class HelloHandler(RequestHandler):
     def get(self):
         with (yield POOL.connected_client()) as client:
             reply = yield client.call("PING")
-            if not isinstance(reply, tornadis.ConnectionError):
+            if not isinstance(reply, tornadis.TornadisException):
                 self.write("Hello, %s" % reply)
         self.finish()
 

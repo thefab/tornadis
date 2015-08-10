@@ -7,7 +7,8 @@ logging.basicConfig(level=logging.CRITICAL)
 @tornado.gen.coroutine
 def talk_to_redis():
     result = yield client.call("PING")
-    print "Result: %s" % result
+    if not isinstance(result, tornadis.TornadisException):
+        print "Result: %s" % result
 
 
 loop = tornado.ioloop.IOLoop.instance()

@@ -9,12 +9,16 @@ import tornado.locks
 import hiredis
 import collections
 import functools
+import logging
 
 from tornadis.connection import Connection
 from tornadis.pipeline import Pipeline
 from tornadis.utils import format_args_in_redis_protocol
 from tornadis.write_buffer import WriteBuffer
 from tornadis.exceptions import ConnectionError, ClientError
+
+
+LOG = logging.getLogger(__name__)
 
 
 def discard_reply_cb(reply):
@@ -82,7 +86,7 @@ class Client(object):
         cb2 = self._close_callback
         self.__callback_queue = collections.deque()
         self._reply_list = []
-        self.__reader = hiredis.Reader()
+        self.__reader = hiredis.Reader(replyError=ClientError)
         kwargs = self.connection_kwargs
         self.__connection = Connection(cb1, cb2, **kwargs)
         return self.__connection.connect()
@@ -119,21 +123,26 @@ class Client(object):
         Args:
             data (str): string (buffer) read on the socket.
         """
-        if data is not None:
-            self.__reader.feed(data)
-            while True:
-                reply = self.__reader.gets()
-                if reply is not False:
-                    try:
-                        callback = self.__callback_queue.popleft()
-                        # normal client (1 reply = 1 callback)
-                        callback(reply)
-                    except IndexError:
-                        # pubsub clients
-                        self._reply_list.append(reply)
-                        self._condition.notify_all()
-                else:
-                    break
+        try:
+            if data is not None:
+                self.__reader.feed(data)
+                while True:
+                    reply = self.__reader.gets()
+                    if reply is not False:
+                        try:
+                            callback = self.__callback_queue.popleft()
+                            # normal client (1 reply = 1 callback)
+                            callback(reply)
+                        except IndexError:
+                            # pubsub clients
+                            self._reply_list.append(reply)
+                            self._condition.notify_all()
+                    else:
+                        break
+        except hiredis.ProtocolError:
+            # something nasty occured (corrupt stream => no way to recover)
+            LOG.warning("corrupted stream => disconnect")
+            self.disconnect()
 
     def call(self, *args, **kwargs):
         """Calls a redis command and returns a Future of the reply.
