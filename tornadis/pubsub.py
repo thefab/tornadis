@@ -20,6 +20,12 @@ class PubSubClient(Client):
     """
 
     def call(self, *args, **kwargs):
+        if args[0] == 'AUTH':
+            # we make an exception here to allow a pubsubclient to
+            # authenticate itself (done within superclass)
+            # we have to make this exception here because people
+            # may want to subclass Client and change call()
+            return super(PubSubClient, self).call(*args, **kwargs)
         raise ClientError("not allowed with PubSubClient object")
 
     def async_call(self, *args, **kwargs):
