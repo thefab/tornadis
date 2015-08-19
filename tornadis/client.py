@@ -28,12 +28,13 @@ def discard_reply_cb(reply):
 class Client(object):
     """High level object to interact with redis."""
 
-    def __init__(self, autoconnect=True, **connection_kwargs):
+    def __init__(self, autoconnect=True, password=None, **connection_kwargs):
         """Constructor.
 
         Args:
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
+            password (string): the password to authenticate with.
             **connection_kwargs: Connection object kwargs :
                 host (string): the host name to connect to.
                 port (int): the port to connect to.
@@ -49,6 +50,7 @@ class Client(object):
         """
         self.connection_kwargs = connection_kwargs
         self.autoconnect = autoconnect
+        self.password = password
         self.__connection = None
         self.subscribed = False
         self.__connection = None
@@ -72,6 +74,7 @@ class Client(object):
         return (self.__connection is not None) and \
                (self.__connection.is_connected())
 
+    @tornado.gen.coroutine
     def connect(self):
         """Connects the client object to redis.
 
@@ -89,7 +92,19 @@ class Client(object):
         self.__reader = hiredis.Reader(replyError=ClientError)
         kwargs = self.connection_kwargs
         self.__connection = Connection(cb1, cb2, **kwargs)
-        return self.__connection.connect()
+        connection_status = yield self.__connection.connect()
+         
+        if connection_status != True or not self.password:
+            # nothing left to do here, return
+            raise tornado.gen.Return(connection_status) 
+         
+        authentication_status = yield self.call('AUTH', self.password)
+        if authentication_status == 'OK':
+            # correct password, it worked
+            raise tornado.gen.Return(True)
+        else:
+            # incorrect password, return back the result
+            raise tornado.gen.Return(authentication_status)
 
     def disconnect(self):
         """Disconnects the client object from redis.
