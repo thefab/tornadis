@@ -7,6 +7,7 @@
 import tornado.ioloop
 import tornado.gen
 import toro
+from datetime import timedelta
 
 from tornadis.client import Client
 from tornadis.exceptions import ConnectionError, ClientError
@@ -153,7 +154,11 @@ class PubSubClient(Client):
             try:
                 reply = self._reply_list.pop(0)
             except IndexError:
-                yield self._condition.wait(deadline=deadline)
+                if deadline is not None:
+                    td = timedelta(seconds=deadline)
+                    yield self._condition.wait(deadline=td)
+                else:
+                    yield self._condition.wait()
         except toro.Timeout:
             pass
         else:
