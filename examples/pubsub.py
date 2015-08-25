@@ -5,7 +5,9 @@ import tornadis
 @tornado.gen.coroutine
 def pubsub_coroutine():
     # Let's get a connected client
-    client = tornadis.PubSubClient()
+    # we don't use autoconnect=True because issue #22
+    client = tornadis.PubSubClient(autoconnect=False)
+    yield client.connect()
 
     # Let's "psubscribe" to a pattern
     yield client.pubsub_psubscribe("foo*")
@@ -20,7 +22,11 @@ def pubsub_coroutine():
         print(msg)
         # >>> ['pmessage', 'foo*', 'foo', 'bar']
         # (for a "publish foo bar" command from another connection)
-        if len(msg) >= 4 and msg[3] == "STOP":
+
+        if isinstance(msg, tornadis.TornadisException):
+            # closed connection by the server
+            break
+        elif len(msg) >= 4 and msg[3] == "STOP":
             # it's a STOP message, let's unsubscribe and quit the loop
             yield client.pubsub_punsubscribe("foo*")
             yield client.pubsub_unsubscribe("bar")

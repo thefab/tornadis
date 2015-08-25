@@ -113,6 +113,10 @@ class Client(object):
                 callback(ConnectionError("closed connection"))
             except IndexError:
                 break
+        if self.subscribed:
+            # pubsub clients
+            self._reply_list.append(ConnectionError("closed connection"))
+            self._condition.notify_all()
 
     def _read_callback(self, data=None):
         """Callback called when some data are read on the socket.
