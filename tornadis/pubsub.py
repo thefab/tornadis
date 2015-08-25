@@ -6,6 +6,7 @@
 
 import tornado.ioloop
 import tornado.gen
+from datetime import timedelta
 
 from tornadis.client import Client
 from tornadis.exceptions import ConnectionError, ClientError
@@ -153,7 +154,11 @@ class PubSubClient(Client):
             raise tornado.gen.Return(reply)
         except IndexError:
             pass
-        yield self._condition.wait(timeout=deadline)
+        if deadline is not None:
+            td = timedelta(seconds=deadline)
+            yield self._condition.wait(timeout=deadline)
+        else:
+            yield self._condition.wait()
         try:
             reply = self._reply_list.pop(0)
         except IndexError:
