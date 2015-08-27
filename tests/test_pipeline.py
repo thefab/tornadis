@@ -37,9 +37,6 @@ class PipelineTestCase(tornado.testing.AsyncTestCase):
         c = Client()
         yield c.connect()
         p = Pipeline()
-        try:
-            yield c.call(p)
-            raise Exception("not raised ClientError")
-        except ClientError:
-            pass
+        res = yield c.call(p)
+        self.assertTrue(isinstance(res, ClientError))
         c.disconnect()

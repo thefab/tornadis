@@ -7,9 +7,13 @@
 import tornado.ioloop
 import tornado.gen
 from datetime import timedelta
+import logging
 
 from tornadis.client import Client
 from tornadis.exceptions import ConnectionError, ClientError
+
+
+LOG = logging.getLogger(__name__)
 
 
 class PubSubClient(Client):
@@ -37,9 +41,6 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the subscribe is ok.
 
-        Raises:
-            ClientError: if you don't provide at least one channel
-
         Examples:
 
             >>> yield client.pubsub_subscribe("channel1", "channel2")
@@ -57,9 +58,6 @@ class PubSubClient(Client):
         Returns:
             Future: Future with True as result if the subscribe is ok.
 
-        Raises:
-            ClientError: if you don't provide at least one pattern
-
         Examples:
 
             >>> yield client.pubsub_psubscribe("channel*", "foo*")
@@ -69,7 +67,8 @@ class PubSubClient(Client):
     @tornado.gen.coroutine
     def _pubsub_subscribe(self, command, *args):
         if len(args) == 0:
-            raise ClientError("you must provide at least one argument")
+            LOG.warning("you must provide at least one argument")
+            raise tornado.gen.Return(False)
         results = yield Client.call(self, command, *args,
                                     __multiple_replies=len(args))
         for reply in results:
@@ -140,14 +139,13 @@ class PubSubClient(Client):
 
         Returns:
             Future with the popped message as result (or None if timeout
-                or ConnectionError object in case of connection errors).
-
-        Raises:
-            ClientError: when you are not subscribed to anything
+                or ConnectionError object in case of connection errors
+                or ClientError object if you are not subscribed)
         """
         if not self.subscribed:
-            raise ClientError("you must subscribe before using "
-                              "pubsub_pop_message")
+            excep = ClientError("you must subscribe before using "
+                                "pubsub_pop_message")
+            raise tornado.gen.Return(excep)
         reply = None
         try:
             reply = self._reply_list.pop(0)

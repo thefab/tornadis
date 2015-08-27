@@ -197,16 +197,13 @@ class Client(object):
         - callback
             Function called (with the result as argument) when the result
             is available. If not set, the reply is silently discarded. In
-            case of connection errors, the callback is called with a
-            ConnectionError object as argument.
+            case of errors, the callback is called with a
+            TornadisException object as argument.
 
         Args:
             *args: full redis command as variable length argument list or
                 a Pipeline object (as a single argument).
             **kwargs: options as keyword parameters.
-
-        Raises:
-            ClientError: your Pipeline object is empty.
 
         Examples:
 
@@ -240,7 +237,11 @@ class Client(object):
             fn = self._pipelined_call
             pipeline = args[0]
             if pipeline.number_of_stacked_calls == 0:
-                raise ClientError("empty pipeline")
+                excep = ClientError("empty pipeline")
+                if callback:
+                    kwargs['callback'](excep)
+                else:
+                    return tornado.gen.maybe_future(excep)
             arguments = (pipeline,)
         else:
             if "__multiple_replies" in kwargs:
