@@ -156,7 +156,7 @@ class PubSubClient(Client):
             pass
         if deadline is not None:
             td = timedelta(seconds=deadline)
-            yield self._condition.wait(timeout=deadline)
+            yield self._condition.wait(timeout=td)
         else:
             yield self._condition.wait()
         try:
