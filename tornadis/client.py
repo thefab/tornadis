@@ -99,7 +99,7 @@ class Client(object):
             raise tornado.gen.Return(connection_status) 
          
         authentication_status = yield self.call('AUTH', self.password)
-        if authentication_status == 'OK':
+        if authentication_status == b'OK':
             # correct password, it worked
             raise tornado.gen.Return(True)
         else:
