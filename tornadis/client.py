@@ -93,11 +93,9 @@ class Client(object):
         kwargs = self.connection_kwargs
         self.__connection = Connection(cb1, cb2, **kwargs)
         connection_status = yield self.__connection.connect()
-         
-        if connection_status != True or not self.password:
+        if connection_status is not True or not self.password:
             # nothing left to do here, return
-            raise tornado.gen.Return(connection_status) 
-         
+            raise tornado.gen.Return(connection_status)
         authentication_status = yield self._call('AUTH', self.password)
         if authentication_status == b'OK':
             # correct password, it worked
