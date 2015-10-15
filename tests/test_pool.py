@@ -120,6 +120,15 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.destroy()
 
     @tornado.testing.gen_test
+    def test_constructor(self):
+        c = ClientPool(max_size=-1, client_timeout=-1, port=6379,
+                       host="localhost", password="foo")
+        with (yield c.connected_client()) as client:
+            self.assertTrue(isinstance(client, ClientError))
+            pass
+        c.destroy()
+
+    @tornado.testing.gen_test
     def test_autoclose(self):
         c = ClientPool(max_size=5, client_timeout=1, autoclose=True)
         client1 = yield c.get_connected_client()
