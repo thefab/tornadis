@@ -162,7 +162,8 @@ class ClientPool(object):
         while True:
             try:
                 client = self.__pool.popleft()
-                client.disconnect()
+                if isinstance(client, Client):
+                    client.disconnect()
             except IndexError:
                 break
 
