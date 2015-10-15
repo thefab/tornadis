@@ -102,7 +102,9 @@ class Client(object):
             raise tornado.gen.Return(True)
         else:
             # incorrect password, return back the result
-            raise tornado.gen.Return(authentication_status)
+            LOG.warning("impossible to connect: bad password")
+            self.__connection.disconnect()
+            raise tornado.gen.Return(False)
 
     def disconnect(self):
         """Disconnects the client object from redis.
@@ -227,6 +229,9 @@ class Client(object):
         def after_autoconnect_callback(future):
             if self.is_connected():
                 self._call(*args, **kwargs)
+            else:
+                # FIXME
+                pass
 
         if 'callback' not in kwargs:
             kwargs['callback'] = discard_reply_cb

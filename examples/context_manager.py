@@ -5,12 +5,13 @@ import tornadis
 @tornado.gen.coroutine
 def ping_redis(num):
     with (yield pool.connected_client()) as client:
-        # client is a connected tornadis.Client instance
-        # it will be automatically released to the pool thanks to the
-        # "with" keyword
-        reply = yield client.call("PING")
-        if not isinstance(reply, tornadis.TornadisException):
-            print("reply #%i : %s" % (num, reply))
+        if not isinstance(client, tornadis.TornadisException):
+            # client is a connected tornadis.Client instance
+            # it will be automatically released to the pool thanks to the
+            # "with" keyword
+            reply = yield client.call("PING")
+            if not isinstance(reply, tornadis.TornadisException):
+                print("reply #%i : %s" % (num, reply))
 
 
 @tornado.gen.coroutine

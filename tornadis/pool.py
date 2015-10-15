@@ -75,7 +75,8 @@ class ClientPool(object):
         object is available.
 
         Returns:
-            A Future object with connected Client instance as a result.
+            A Future object with connected Client instance as a result
+                (or ClientError if there was a connection problem)
         """
         if self.__sem is not None:
             yield self.__sem.acquire()
@@ -85,6 +86,8 @@ class ClientPool(object):
             res = yield client.connect()
             if not(res):
                 LOG.warning("can't connect to %s", client.title)
+                raise tornado.gen.Return(ClientError("can't connect to %s" %
+                                                     client.title))
         raise tornado.gen.Return(client)
 
     def get_client_nowait(self):
