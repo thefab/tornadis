@@ -1,5 +1,14 @@
 # CHANGES
 
+## Release 0.7.0
+
+- better documentation and examples
+- less strict dependencies
+- tornado 4.2 migration (toro inclusion)
+- TornadisException base exception class is now available for use
+- password authentification (thanks to jammed343)
+- fix some nasty bugs in case of network or redis errors
+
 ## Release 0.6.0
 
 - add aggressive_write option
