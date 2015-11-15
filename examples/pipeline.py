@@ -18,8 +18,8 @@ def pipeline_coroutine():
 
     if isinstance(results, tornadis.TornadisException):
         # For specific reasons, tornadis nearly never raises any exception
-        # they are returned as result
-        print "got exception: %s" % result
+        # they are returned as results
+        print "got exception: %s" % results
     else:
         # The two replies are in the results array
         print results
