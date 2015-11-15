@@ -4,5 +4,4 @@
    :titlesonly:
 
    quickstart
-   introduction
    api

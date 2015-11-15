@@ -1,6 +1,8 @@
 Introduction
 ------------
 
+FIXME: to update !!!
+
 Let's see how to get started with tornadis using the `Client` class: In
 the following example, we connect to Redis and terminate the program
 when we're connected or if an error occurs::
