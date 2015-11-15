@@ -47,7 +47,7 @@ class Client(object):
             **connection_kwargs: :class:`Connection` object kwargs.
         """
         if 'read_callback' in connection_kwargs or \
-            'close_callback' in connection_kwargs:
+                'close_callback' in connection_kwargs:
             raise Exception("read_callback and close_callback are not allowed "
                             "to be used here.")
         self.connection_kwargs = connection_kwargs
