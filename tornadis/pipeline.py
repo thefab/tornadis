@@ -24,6 +24,7 @@ class Pipeline(object):
     """
 
     def __init__(self):
+        """Constructor."""
         self.pipelined_args = []
         self.number_of_stacked_calls = 0
 

@@ -37,7 +37,20 @@ ERROR_EVENT = IOLoop.ERROR
 
 
 class Connection(object):
-    """Low level connection object."""
+    """Low level connection object.
+
+    Attributes:
+        host (string): the host name to connect to.
+        port (int): the port to connect to.
+        unix_domain_socket (string): path to a unix socket to connect to
+            (if set, overrides host/port parameters).
+        read_page_size (int): page size for reading.
+        write_page_size (int): page size for writing.
+        connect_timeout (int): timeout (in seconds) for connecting.
+        tcp_nodelay (boolean): set TCP_NODELAY on socket.
+        aggressive_write (boolean): try to minimize write latency over
+            global throughput (default False).
+    """
 
     def __init__(self, read_callback, close_callback,
                  host=tornadis.DEFAULT_HOST,
@@ -49,8 +62,10 @@ class Connection(object):
         """Constructor.
 
         Args:
-            read_callback: callback called when there is something to read.
-            close_callback: callback called when the connection is closed.
+            read_callback: callback called when there is something to read
+                (private, do not use from Client constructor).
+            close_callback: callback called when the connection is closed
+                (private, do not use from Client constructor).
             host (string): the host name to connect to.
             port (int): the port to connect to.
             unix_domain_socket (string): path to a unix socket to connect to

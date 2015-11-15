@@ -25,9 +25,11 @@ class PubSubClient(Client):
     """
 
     def call(self, *args, **kwargs):
+        """Not allowed method with PubSubClient object."""
         raise ClientError("not allowed with PubSubClient object")
 
     def async_call(self, *args, **kwargs):
+        """Not allowed method with PubSubClient object."""
         raise ClientError("not allowed with PubSubClient object")
 
     def pubsub_subscribe(self, *args):

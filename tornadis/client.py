@@ -26,7 +26,16 @@ def discard_reply_cb(reply):
 
 
 class Client(object):
-    """High level object to interact with redis."""
+    """High level object to interact with redis.
+
+    Attributes:
+        autoconnect (boolean): True if the client is in autoconnect mode
+            (and in autoreconnection mode) (default True).
+        password (string): the password to authenticate with.
+        connection_kwargs (dict): :class:`Connection` object
+            kwargs (note that read_callback and close_callback args are
+            set automatically).
+    """
 
     def __init__(self, autoconnect=True, password=None, **connection_kwargs):
         """Constructor.
@@ -35,19 +44,12 @@ class Client(object):
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
             password (string): the password to authenticate with.
-            **connection_kwargs: Connection object kwargs :
-                host (string): the host name to connect to.
-                port (int): the port to connect to.
-                unix_domain_socket (string): path to a unix socket to connect
-                    to (if set, overrides host/port parameters).
-                read_page_size (int): page size for reading.
-                write_page_size (int): page size for writing.
-                connect_timeout (int): timeout (in seconds) for connecting.
-                tcp_nodelay (boolean): set TCP_NODELAY on socket.
-                aggressive_write (boolean): try to minimize write latency over
-                    global throughput (default False).
-                ioloop (IOLoop): the tornado ioloop to use.
+            **connection_kwargs: :class:`Connection` object kwargs.
         """
+        if 'read_callback' in connection_kwargs or \
+            'close_callback' in connection_kwargs:
+            raise Exception("read_callback and close_callback are not allowed "
+                            "to be used here.")
         self.connection_kwargs = connection_kwargs
         self.autoconnect = autoconnect
         self.password = password
@@ -79,6 +81,7 @@ class Client(object):
         """Connects the client object to redis.
 
         It's safe to use this method even if you are already connected.
+        Note: this method is useless with autoconnect mode (default).
 
         Returns:
             a Future object with True as result if the connection was ok.
