@@ -2,10 +2,13 @@
 
 ## Status (master branch)
 
-[![Build Status](https://travis-ci.org/thefab/tornadis.png)](https://travis-ci.org/thefab/tornadis)
+[![Travis](https://img.shields.io/travis/thefab/tornadis.svg)](https://travis-ci.org/thefab/tornadis)
 [![Coverage Status](https://coveralls.io/repos/thefab/tornadis/badge.png)](https://coveralls.io/r/thefab/tornadis)
 [![Code Health](https://landscape.io/github/thefab/tornadis/master/landscape.png)](https://landscape.io/github/thefab/tornadis/master)
 [![Requirements Status](https://requires.io/github/thefab/tornadis/requirements.png?branch=master)](https://requires.io/github/thefab/tornadis/requirements/?branch=master)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/thefab/docker-centos-opinionated/blob/master/LICENSE)
+[![Maturity](https://img.shields.io/badge/maturity-beta-yellow.svg)](https://github.com/thefab/docker-centos-opinionated)
+[![Maintenance](https://img.shields.io/maintenance/yes/2016.svg)](https://github.com/thefab)
 
 ## What is it ?
 
