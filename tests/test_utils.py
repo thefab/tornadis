@@ -18,38 +18,38 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
 
     def test_protocol1(self):
         res = bytes(format_args_in_redis_protocol("PING"))
-        self.assertEquals(res, b"*1\r\n$4\r\nPING\r\n")
+        self.assertEqual(res, b"*1\r\n$4\r\nPING\r\n")
 
     def test_protocol2(self):
         res = bytes(format_args_in_redis_protocol("SET", "key", "foobar"))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$6\r\nfoobar\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$6\r\nfoobar\r\n")
         res = bytes(format_args_in_redis_protocol("SET", "key",
                                                   six.u("foobar")))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$6\r\nfoobar\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$6\r\nfoobar\r\n")
 
     def test_protocol3(self):
         res = bytes(format_args_in_redis_protocol("SET", "key", six.u("\xe9")))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$2\r\n\xc3\xa9\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$2\r\n\xc3\xa9\r\n")
 
     def test_protocol4(self):
         res = bytes(format_args_in_redis_protocol("SET", "key", b"\000"))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$1\r\n\000\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$1\r\n\000\r\n")
 
     def test_protocol5(self):
         res = bytes(format_args_in_redis_protocol("SET", "key", 1))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$1\r\n1\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$1\r\n1\r\n")
 
     def test_protocol6(self):
         wb = WriteBuffer()
         wb.append(b"foobar")
         res = bytes(format_args_in_redis_protocol("SET", "key", wb))
-        self.assertEquals(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
-                          b"$6\r\nfoobar\r\n")
+        self.assertEqual(res, b"*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n"
+                         b"$6\r\nfoobar\r\n")
 
     def test_protocol_exception(self):
         self.assertRaises(Exception, format_args_in_redis_protocol, ["foo"])
@@ -65,7 +65,7 @@ class UtilsTestCase(tornado.testing.AsyncTestCase):
         cb = self._test_context_manager_future_cb
         cmf = ContextManagerFuture(future, cb)
         with (yield cmf) as value:
-            self.assertEquals(value, "foobar")
+            self.assertEqual(value, "foobar")
         boolean = self._test_context_manager_future_cb_called
         self.assertTrue(boolean)
 
