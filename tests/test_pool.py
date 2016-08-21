@@ -58,6 +58,24 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.destroy()
 
     @tornado.testing.gen_test
+    def test_get_client_client_error(self):
+        wrong_port = 11111
+
+        c = ClientPool(max_size=1, port=wrong_port)
+
+        client = yield c.get_connected_client()
+
+        self.assertTrue(isinstance(client, ClientError))
+
+        c.release_client(client)
+
+        same_client = yield c.get_connected_client()
+
+        self.assertTrue(isinstance(same_client, ClientError))
+
+        c.destroy()
+
+    @tornado.testing.gen_test
     def test_get_client_nowait1(self):
         c = ClientPool()
         client = c.get_client_nowait()
