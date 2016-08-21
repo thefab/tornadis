@@ -69,9 +69,9 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
 
         c.release_client(client)
 
-        same_client = yield c.get_connected_client()
+        new_client = yield c.get_connected_client()
 
-        self.assertTrue(isinstance(same_client, ClientError))
+        self.assertTrue(isinstance(new_client, ClientError))
 
         c.destroy()
 
