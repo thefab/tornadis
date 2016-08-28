@@ -24,7 +24,7 @@
 - production ready (timeouts, connection pool, error management)
 - nearly all redis features (pipeline, pubsub, standard commands)
 - autoconnection, autoreconnection
-- Python2 (>=2.7) and Python3 (>=3.2) support
+- Python2 (>=2.7) and Python3 (>=3.3) support
 - Tornado 4.2 (in master branch) and Tornado 4.1 + toro (in tornado41 branch) support
 
 ## Example
