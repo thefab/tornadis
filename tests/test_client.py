@@ -31,7 +31,7 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         c = Client()
         yield c.connect()
         res = yield c.call('PING')
-        self.assertEquals(res, b"PONG")
+        self.assertEqual(res, b"PONG")
         c.disconnect()
 
     @tornado.testing.gen_test
@@ -46,11 +46,11 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
     def test_autoconnect_future(self):
         c = Client(autoconnect=True)
         res = yield c.call('PING')
-        self.assertEquals(res, b"PONG")
+        self.assertEqual(res, b"PONG")
         c.disconnect()
 
     def _test_autoconnect_callback_cb(self, condition, result):
-        self.assertEquals(result, b"PONG")
+        self.assertEqual(result, b"PONG")
         condition.notify()
 
     @tornado.testing.gen_test
@@ -87,7 +87,7 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         self.assertFalse(c.is_connected())
         yield c.connect()
         res2 = yield c.call("PING")
-        self.assertEquals(res2, b"PONG")
+        self.assertEqual(res2, b"PONG")
         c.disconnect()
         c2.disconnect()
 
