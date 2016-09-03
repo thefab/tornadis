@@ -28,7 +28,7 @@ else:
 
 setup(
     name='tornadis',
-    version="0.7.0",
+    version="0.7.1",
     author="Fabien MARTY",
     author_email="fabien.marty@gmail.com",
     url="https://github.com/thefab/tornadis",

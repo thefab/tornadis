@@ -1,5 +1,14 @@
 # CHANGES
 
+## Release 0.7.1
+
+- python 3.5 support in CI
+- complex pip requirements to support :
+    - python >= 3.2 with tornado 4.2 or tornado 4.3
+    - python >= 3.3 with tornado 4.4
+- fix a bug with Pool in case of connection failure (thanks to Sergey Orlov)
+- cosmetic changes in README
+
 ## Release 0.7.0
 
 - better documentation and examples
