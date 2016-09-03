@@ -4,6 +4,7 @@
 # This file is part of tornadis library released under the MIT license.
 # See the LICENSE file for more information.
 
+import sys
 from setuptools import setup, find_packages
 
 DESCRIPTION = "tornadis is an async minimal redis client for tornado " \
@@ -18,7 +19,13 @@ except IOError:
 with open('pip-requirements.txt') as reqs:
     install_requires = [
         line for line in reqs.read().split('\n') if (line and not
-                                                     line.startswith('--'))]
+                                                     line.startswith('--')) and
+                                                     not ";" in line]
+if sys.version_info[:2] == (3, 2):
+    install_requires.append("tornado>=4.2,<4.4")
+else:
+    install_requires.append("tornado>=4.2")
+
 setup(
     name='tornadis',
     version="0.7.0",
