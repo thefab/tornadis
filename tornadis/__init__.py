@@ -10,13 +10,14 @@ DEFAULT_CONNECT_TIMEOUT = 20
 DEFAULT_READ_PAGE_SIZE = 65536
 DEFAULT_WRITE_PAGE_SIZE = 65536
 
-from tornadis.utils import WriteBuffer
-from tornadis.client import Client
-from tornadis.pubsub import PubSubClient
-from tornadis.pool import ClientPool
-from tornadis.pipeline import Pipeline
-from tornadis.connection import Connection
-from tornadis.exceptions import ConnectionError, ClientError, TornadisException
+from tornadis.utils import WriteBuffer  # noqa
+from tornadis.client import Client  # noqa
+from tornadis.pubsub import PubSubClient  # noqa
+from tornadis.pool import ClientPool  # noqa
+from tornadis.pipeline import Pipeline  # noqa
+from tornadis.connection import Connection  # noqa
+from tornadis.exceptions import ConnectionError, ClientError  # noqa
+from tornadis.exceptions import TornadisException  # noqa
 
 __all__ = ['Client', 'ClientPool', 'Pipeline',
            'ConnectionError', 'ClientError', 'TornadisException',

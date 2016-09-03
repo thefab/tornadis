@@ -18,9 +18,9 @@ except IOError:
 
 with open('pip-requirements.txt') as reqs:
     install_requires = [
-        line for line in reqs.read().split('\n') if (line and not
-                                                     line.startswith('--')) and
-                                                     not ";" in line]
+        line for line in reqs.read().split('\n')
+        if (line and not line.startswith('--')) and (";" not in line)]
+
 if sys.version_info[:2] == (3, 2):
     install_requires.append("tornado>=4.2,<4.4")
 else:
