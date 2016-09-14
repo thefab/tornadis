@@ -27,9 +27,9 @@ class PipelineTestCase(tornado.testing.AsyncTestCase):
         p.stack_call('PING')
         p.stack_call('PING')
         res = yield c.call(p)
-        self.assertEquals(len(res), 2)
-        self.assertEquals(res[0], b'PONG')
-        self.assertEquals(res[1], b'PONG')
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0], b'PONG')
+        self.assertEqual(res[1], b'PONG')
         c.disconnect()
 
     @tornado.testing.gen_test

@@ -172,8 +172,8 @@ class ConnectionTestCase(AbstractConnectionTestCase):
         c.write(data2)
         reply1 = yield self.reply_queue.get()
         reply2 = yield self.reply_queue.get()
-        self.assertEquals(reply1, b"OK")
-        self.assertEquals(reply2, BIG_VALUE)
+        self.assertEqual(reply1, b"OK")
+        self.assertEqual(reply2, BIG_VALUE)
         c.disconnect()
 
     @tornado.testing.gen_test
@@ -202,9 +202,9 @@ class ConnectionTestCase(AbstractConnectionTestCase):
         c.write(data1)
         c.write(data2)
         reply1 = yield self.reply_queue.get()
-        self.assertEquals(reply1, b"PONG")
+        self.assertEqual(reply1, b"PONG")
         reply2 = yield self.reply_queue.get()
-        self.assertEquals(reply2, b"OK")
+        self.assertEqual(reply2, b"OK")
         c.disconnect()
 
     @tornado.testing.gen_test
@@ -242,9 +242,9 @@ class ConnectionTestCase(AbstractConnectionTestCase):
         c.write(data1)
         c.write(data2)
         reply1 = yield self.reply_queue.get()
-        self.assertEquals(reply1, b"PONG")
+        self.assertEqual(reply1, b"PONG")
         reply2 = yield self.reply_queue.get()
-        self.assertEquals(reply2, b"OK")
+        self.assertEqual(reply2, b"OK")
         c.write(data1)
         # Wait a short moment while the server closes the socket
         yield tornado.gen.sleep(.0001)

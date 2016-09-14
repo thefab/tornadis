@@ -159,7 +159,7 @@ class ClientPool(object):
         Args:
             client: Client object.
         """
-        if not self._is_expired_client(client):
+        if isinstance(client, Client) and not self._is_expired_client(client):
             self.__pool.append(client)
         if self.__sem is not None:
             self.__sem.release()
