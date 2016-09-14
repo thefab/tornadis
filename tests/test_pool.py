@@ -104,9 +104,11 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
 
     @tornado.testing.gen_test
     def test_get_client_select_db_after_connect(self):
-        c = ClientPool(db=1)
+        db = 13
+        c = ClientPool(db=db)
         client1 = yield c.get_connected_client()
         self.assertTrue(isinstance(client1, Client))
+        self.assertEqual(db, c.db)
         c.release_client(client1)
         c.destroy()
 
