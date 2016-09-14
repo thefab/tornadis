@@ -36,7 +36,9 @@ class ClientPool(object):
         """
         self.max_size = max_size
         self.client_timeout = client_timeout
+        self.db = client_kwargs.pop('db', 0)
         self.client_kwargs = client_kwargs
+
         self.__ioloop = client_kwargs.get('ioloop',
                                           tornado.ioloop.IOLoop.instance())
         self.autoclose = autoclose
@@ -88,6 +90,10 @@ class ClientPool(object):
                 LOG.warning("can't connect to %s", client.title)
                 raise tornado.gen.Return(ClientError("can't connect to %s" %
                                                      client.title))
+
+            if self.db != 0:
+                yield client.call('SELECT', self.db)
+
         raise tornado.gen.Return(client)
 
     def get_client_nowait(self):

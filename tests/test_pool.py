@@ -85,6 +85,14 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.destroy()
 
     @tornado.testing.gen_test
+    def test_get_client_select_db_after_connect(self):
+        c = ClientPool(db=1)
+        client1 = yield c.get_connected_client()
+        self.assertTrue(isinstance(client1, Client))
+        c.release_client(client1)
+        c.destroy()
+
+    @tornado.testing.gen_test
     def test_preconnect1(self):
         c = ClientPool(max_size=-1)
         try:
