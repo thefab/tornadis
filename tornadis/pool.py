@@ -21,7 +21,7 @@ LOG = logging.getLogger(__name__)
 class ClientPool(object):
     """High level object to deal with a pool of redis clients."""
 
-    def __init__(self, max_size=-1, client_timeout=-1, autoclose=False,
+    def __init__(self, max_size=-1, client_timeout=-1, autoclose=False, db=0,
                  **client_kwargs):
         """Constructor.
 
@@ -32,11 +32,12 @@ class ClientPool(object):
             autoclose (boolean): automatically disconnect released connections
                 with lifetime > client_timeout (test made every
                 client_timeout/10 seconds).
+            db (int) database number
             client_kwargs (dict): Client constructor arguments.
         """
         self.max_size = max_size
         self.client_timeout = client_timeout
-        self.db = client_kwargs.pop('db', 0)
+        self.db = db
         self.client_kwargs = client_kwargs
 
         self.__ioloop = client_kwargs.get('ioloop',
