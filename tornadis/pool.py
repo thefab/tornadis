@@ -87,13 +87,17 @@ class ClientPool(object):
         newly_created, client = self._get_client_from_pool_or_make_it()
         if newly_created:
             res = yield client.connect()
-            if not(res):
+            if not res:
                 LOG.warning("can't connect to %s", client.title)
-                raise tornado.gen.Return(ClientError("can't connect to %s" %
-                                                     client.title))
+                raise tornado.gen.Return(
+                    ClientError("can't connect to %s" % client.title))
 
             if self.db != 0:
-                yield client.call('SELECT', self.db)
+                res = yield client.call('SELECT', self.db)
+
+                if isinstance(res, ClientError):
+                    LOG.warning("can't select db %s", self.db)
+                    raise tornado.gen.Return(res)
 
         raise tornado.gen.Return(client)
 
