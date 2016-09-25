@@ -103,6 +103,28 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         c.destroy()
 
     @tornado.testing.gen_test
+    def test_get_client_select_db_after_connect(self):
+        db = 13
+        c = ClientPool(db=db)
+        client = yield c.get_connected_client()
+
+        self.assertIsInstance(client, Client)
+        self.assertEqual(db, c.db)
+
+        c.release_client(client)
+        c.destroy()
+
+    @tornado.testing.gen_test
+    def test_get_client_invalid_select_db_after_connect(self):
+        db = 'non-existent-db'
+        c = ClientPool(db=db)
+        client = yield c.get_connected_client()
+
+        self.assertIsInstance(client, ClientError)
+
+        c.destroy()
+
+    @tornado.testing.gen_test
     def test_preconnect1(self):
         c = ClientPool(max_size=-1)
         try:
