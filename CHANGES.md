@@ -1,5 +1,10 @@
 # CHANGES
 
+## Release 0.8.0
+
+- add support for automatic db selection in Client or Pool object (thanks
+to Sergey Orlov)
+
 ## Release 0.7.1
 
 - python 3.5 support in CI
