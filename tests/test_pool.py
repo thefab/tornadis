@@ -107,10 +107,8 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         db = 13
         c = ClientPool(db=db)
         client = yield c.get_connected_client()
-
         self.assertIsInstance(client, Client)
-        self.assertEqual(db, c.db)
-
+        self.assertEqual(db, client.db)
         c.release_client(client)
         c.destroy()
 
@@ -119,9 +117,7 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         db = 'non-existent-db'
         c = ClientPool(db=db)
         client = yield c.get_connected_client()
-
         self.assertIsInstance(client, ClientError)
-
         c.destroy()
 
     @tornado.testing.gen_test

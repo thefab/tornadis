@@ -27,6 +27,13 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         c.disconnect()
 
     @tornado.testing.gen_test
+    def test_init_with_db(self):
+        c = Client(db=2)
+        yield c.connect()
+        self.assertEqual(c.db, 2)
+        c.disconnect()
+
+    @tornado.testing.gen_test
     def test_ping(self):
         c = Client()
         yield c.connect()

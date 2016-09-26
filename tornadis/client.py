@@ -32,18 +32,21 @@ class Client(object):
         autoconnect (boolean): True if the client is in autoconnect mode
             (and in autoreconnection mode) (default True).
         password (string): the password to authenticate with.
+        db (int) database number.
         connection_kwargs (dict): :class:`Connection` object
             kwargs (note that read_callback and close_callback args are
             set automatically).
     """
 
-    def __init__(self, autoconnect=True, password=None, **connection_kwargs):
+    def __init__(self, autoconnect=True, password=None, db=0,
+                 **connection_kwargs):
         """Constructor.
 
         Args:
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
             password (string): the password to authenticate with.
+            db (int) database number.
             **connection_kwargs: :class:`Connection` object kwargs.
         """
         if 'read_callback' in connection_kwargs or \
@@ -53,6 +56,7 @@ class Client(object):
         self.connection_kwargs = connection_kwargs
         self.autoconnect = autoconnect
         self.password = password
+        self.db = db
         self.__connection = None
         self.subscribed = False
         self.__connection = None
@@ -96,18 +100,22 @@ class Client(object):
         kwargs = self.connection_kwargs
         self.__connection = Connection(cb1, cb2, **kwargs)
         connection_status = yield self.__connection.connect()
-        if connection_status is not True or not self.password:
+        if connection_status is not True:
             # nothing left to do here, return
-            raise tornado.gen.Return(connection_status)
-        authentication_status = yield self._call('AUTH', self.password)
-        if authentication_status == b'OK':
-            # correct password, it worked
-            raise tornado.gen.Return(True)
-        else:
-            # incorrect password, return back the result
-            LOG.warning("impossible to connect: bad password")
-            self.__connection.disconnect()
             raise tornado.gen.Return(False)
+        if self.password is not None:
+            authentication_status = yield self._call('AUTH', self.password)
+            if authentication_status != b'OK':
+                # incorrect password, return back the result
+                LOG.warning("impossible to connect: bad password")
+                self.__connection.disconnect()
+                raise tornado.gen.Return(False)
+        if self.db != 0:
+            db_status = yield self._call('SELECT', self.db)
+            if db_status != b'OK':
+                LOG.warning("can't select db %s", self.db)
+                raise tornado.gen.Return(False)
+        raise tornado.gen.Return(True)
 
     def disconnect(self):
         """Disconnects the client object from redis.
