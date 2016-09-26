@@ -32,7 +32,7 @@ class Client(object):
         autoconnect (boolean): True if the client is in autoconnect mode
             (and in autoreconnection mode) (default True).
         password (string): the password to authenticate with.
-        db (int) database number.
+        db (int): database number.
         connection_kwargs (dict): :class:`Connection` object
             kwargs (note that read_callback and close_callback args are
             set automatically).
@@ -46,7 +46,7 @@ class Client(object):
             autoconnect (boolean): True if the client is in autoconnect mode
                 (and in autoreconnection mode) (default True).
             password (string): the password to authenticate with.
-            db (int) database number.
+            db (int): database number.
             **connection_kwargs: :class:`Connection` object kwargs.
         """
         if 'read_callback' in connection_kwargs or \
