@@ -4,6 +4,7 @@
 
 - add support for automatic db selection in Client or Pool object (thanks
 to Sergey Orlov)
+- fix missing doc section about ClientPool
 
 ## Release 0.7.1
 
