@@ -9,7 +9,7 @@ import functools
 from tornadis.pool import ClientPool
 from tornadis.client import Client
 from tornadis.exceptions import ClientError
-from support import test_redis_or_raise_skiptest
+from support import mock, test_redis_or_raise_skiptest
 
 
 class ClientPoolTestCase(tornado.testing.AsyncTestCase):
@@ -173,3 +173,12 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
         yield tornado.gen.sleep(3)
         self.assertFalse(client1.is_connected())
         c.destroy()
+
+    @tornado.testing.gen_test
+    def test_release_expired_client_disconnect(self):
+        with mock.patch.object(ClientPool, '_is_expired_client', return_value=True):
+            c = ClientPool(max_size=5, client_timeout=60, autoclose=False)
+            client = yield c.get_connected_client()
+            self.assertTrue(client.is_connected())
+            c.release_client(client)
+            self.assertFalse(client.is_connected())
