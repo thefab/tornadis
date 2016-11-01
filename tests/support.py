@@ -5,6 +5,15 @@ import socket
 import unittest
 
 
+try:
+    from unittest import mock  # noqa
+except ImportError:
+    try:
+        import mock  # noqa
+    except ImportError:
+        pass
+
+
 def test_redis_or_raise_skiptest(host="localhost", port=6379):
     s = socket.socket()
     try:
