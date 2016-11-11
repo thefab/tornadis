@@ -7,3 +7,4 @@ flake8>=2.4
 coveralls==1.0 ; python_version >= '3.2' and python_version < '3.3'
 coveralls>=1.1 ; python_version < '3.2' or python_version >= '3.3'
 tox>=2.2
+mock ; python_version < '3.0'
