@@ -73,6 +73,8 @@ class PubSubClient(Client):
             raise tornado.gen.Return(False)
         results = yield Client.call(self, command, *args,
                                     __multiple_replies=len(args))
+        if isinstance(results, ConnectionError):
+            raise tornado.gen.Return(False)
         for reply in results:
             if isinstance(reply, ConnectionError) or len(reply) != 3 or \
                     reply[0].lower() != command.lower() or reply[2] == 0:
@@ -124,6 +126,8 @@ class PubSubClient(Client):
             args_len = len(args)
         results = yield Client.call(self, command, *args,
                                     __multiple_replies=args_len)
+        if isinstance(results, ConnectionError):
+            raise tornado.gen.Return(False)
         for reply in results:
             if isinstance(reply, ConnectionError) or len(reply) != 3 or \
                     reply[0].lower() != command.lower():
