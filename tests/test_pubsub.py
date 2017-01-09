@@ -7,7 +7,7 @@ import tornado.gen
 
 from tornadis.pubsub import PubSubClient
 from tornadis.client import Client
-from support import test_redis_or_raise_skiptest
+from support import test_redis_or_raise_skiptest, mock
 
 
 class PubSubClientTestCase(tornado.testing.AsyncTestCase):
@@ -93,3 +93,19 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
         res = yield c.pubsub_subscribe()
         self.assertFalse(res)
         c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_subscribe_no_redis(self):
+        c = PubSubClient()
+        with mock.patch.object(c, "is_connected", return_value=False):
+            res = yield c.pubsub_subscribe("foo")
+            self.assertFalse(res)
+            self.assertFalse(c.subscribed)
+
+    @tornado.testing.gen_test
+    def test_unsubscribe_no_redis(self):
+        c = PubSubClient()
+        yield c.pubsub_subscribe("foo")
+        with mock.patch.object(c, "is_connected", return_value=False):
+            res = yield c.pubsub_unsubscribe("foo")
+            self.assertFalse(res)

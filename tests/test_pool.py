@@ -176,7 +176,9 @@ class ClientPoolTestCase(tornado.testing.AsyncTestCase):
 
     @tornado.testing.gen_test
     def test_release_expired_client_disconnect(self):
-        with mock.patch.object(ClientPool, '_is_expired_client', return_value=True):
+        with mock.patch.object(ClientPool,
+                               '_is_expired_client',
+                               return_value=True):
             c = ClientPool(max_size=5, client_timeout=60, autoclose=False)
             client = yield c.get_connected_client()
             self.assertTrue(client.is_connected())
