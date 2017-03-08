@@ -5,10 +5,23 @@ import tornado.testing
 import tornado.ioloop
 import tornado
 import functools
+import socket
 
 from tornadis.client import Client
 from tornadis.exceptions import ConnectionError, ClientError
 from support import test_redis_or_raise_skiptest
+from support import FakeSocketObject
+from support import fake_socket_constructor
+
+
+class FakeSocketObject5(FakeSocketObject):
+
+    def __init__(self, *args, **kwargs):
+        self.__first = True
+        FakeSocketObject.__init__(self, *args, **kwargs)
+
+    def send(self, *args, **kwargs):
+        return len(args[0])
 
 
 class ClientTestCase(tornado.testing.AsyncTestCase):
@@ -67,6 +80,31 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         cb = functools.partial(self._test_autoconnect_callback_cb, condition)
         c.async_call('PING', callback=cb)
         yield condition.wait()
+        c.disconnect()
+
+    @tornado.testing.gen_test
+    def test_read_timeout1(self):
+        orig_constructor = socket.socket
+        socket.socket = functools.partial(fake_socket_constructor,
+                                          FakeSocketObject5)
+        c = Client(read_timeout=1)
+        res = yield c.connect()
+        self.assertTrue(res)
+        res2 = yield c.call('PING')
+        self.assertTrue(isinstance(res2, ConnectionError))
+        c.disconnect()
+        socket.socket = orig_constructor
+
+    @tornado.testing.gen_test
+    def test_read_timeout2(self):
+        c = Client(read_timeout=1, autoconnect=False)
+        res = yield c.connect()
+        self.assertTrue(res)
+        res2 = yield c.call('PING')
+        self.assertEqual(res2, "PONG")
+        yield tornado.gen.sleep(2)
+        res3 = yield c.call('PING')
+        self.assertTrue(isinstance(res3, ConnectionError))
         c.disconnect()
 
     @tornado.testing.gen_test

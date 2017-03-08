@@ -15,6 +15,7 @@ from tornado.ioloop import IOLoop
 import tornadis
 import errno
 import logging
+from datetime import datetime
 
 # Stolen from tornado/iostream.py
 _ERRNO_WOULDBLOCK = (errno.EWOULDBLOCK, errno.EAGAIN)
@@ -50,6 +51,9 @@ class Connection(object):
         tcp_nodelay (boolean): set TCP_NODELAY on socket.
         aggressive_write (boolean): try to minimize write latency over
             global throughput (default False).
+        read_timeout (int): timeout (in seconds) to read something on
+            the socket (if nothing is read during this time, the
+            connection is closed) (default: 0 means no timeout)
     """
 
     def __init__(self, read_callback, close_callback,
@@ -58,7 +62,9 @@ class Connection(object):
                  read_page_size=tornadis.DEFAULT_READ_PAGE_SIZE,
                  write_page_size=tornadis.DEFAULT_WRITE_PAGE_SIZE,
                  connect_timeout=tornadis.DEFAULT_CONNECT_TIMEOUT,
-                 tcp_nodelay=False, aggressive_write=False, ioloop=None):
+                 tcp_nodelay=False, aggressive_write=False,
+                 read_timeout=tornadis.DEFAULT_READ_TIMEOUT,
+                 ioloop=None):
         """Constructor.
 
         Args:
@@ -76,6 +82,9 @@ class Connection(object):
             tcp_nodelay (boolean): set TCP_NODELAY on socket.
             aggressive_write (boolean): try to minimize write latency over
                 global throughput (default False).
+            read_timeout (int): timeout (in seconds) to read something on
+                the socket (if nothing is read during this time, the
+                connection is closed) (default: 0 means no timeout)
             ioloop (IOLoop): the tornado ioloop to use.
         """
         self.host = host
@@ -91,10 +100,12 @@ class Connection(object):
         self.read_page_size = read_page_size
         self.write_page_size = write_page_size
         self.connect_timeout = connect_timeout
+        self.read_timeout = read_timeout
         self.tcp_nodelay = tcp_nodelay
         self.aggressive_write = aggressive_write
         self._write_buffer = WriteBuffer()
         self._listened_events = 0
+        self._last_read = datetime.now()
 
     def _redis_server(self):
         if self.unix_domain_socket:
@@ -162,6 +173,11 @@ class Connection(object):
         if self.is_connecting():
             dt = self._state.get_last_state_change_timedelta()
             if dt.total_seconds() > self.connect_timeout:
+                self.disconnect()
+        if self.read_timeout > 0:
+            dt = datetime.now() - self._last_read
+            if dt.total_seconds() > self.read_timeout:
+                LOG.warning("read timeout => disconnecting")
                 self.disconnect()
 
     def _register_or_update_event_handler(self, write=True):
@@ -236,6 +252,8 @@ class Connection(object):
     def _handle_read(self):
         chunk = self._read(self.read_page_size)
         if chunk is not None:
+            if self.read_timeout > 0:
+                self._last_read = datetime.now()
             self._read_callback(chunk)
 
     def _handle_write(self):

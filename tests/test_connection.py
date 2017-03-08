@@ -10,6 +10,8 @@ from tornadis.connection import Connection
 from tornadis.utils import format_args_in_redis_protocol
 from support import test_redis_or_raise_skiptest
 from support import test_redis_uds_or_raise_skiptest
+from support import FakeSocketObject
+from support import fake_socket_constructor
 import hiredis
 import functools
 import random
@@ -18,37 +20,6 @@ import six
 
 BIG_VALUE = six.b("".join(["%i" % random.randint(0, 9)
                            for x in range(0, 1000000)]))
-
-
-class FakeSocketObject(object):
-
-    def __init__(self, *args, **kwargs):
-        cls = socket._socket.socket
-        self.__socket = cls(*args, **kwargs)
-
-    def setblocking(self, *args, **kwargs):
-        return self.__socket.setblocking(*args, **kwargs)
-
-    def connect(self, *args, **kwargs):
-        return self.__socket.connect(*args, **kwargs)
-
-    def fileno(self, *args, **kwargs):
-        return self.__socket.fileno(*args, **kwargs)
-
-    def close(self, *args, **kwargs):
-        return self.__socket.close(*args, **kwargs)
-
-    def getsockopt(self, *args, **kwargs):
-        return self.__socket.getsockopt(*args, **kwargs)
-
-    def setsockopt(self, *args, **kwargs):
-        return self.__socket.setsockopt(*args, **kwargs)
-
-    def recv(self, *args, **kwargs):
-        return self.__socket.recv(*args, **kwargs)
-
-    def send(self, *args, **kwargs):
-        return self.__socket.send(*args, **kwargs)
 
 
 class FakeSocketObject1(FakeSocketObject):
@@ -92,10 +63,6 @@ class FakeSocketObject4(FakeSocketObject):
             raise socket.error(errno.EWOULDBLOCK, "would block")
         else:
             return FakeSocketObject.recv(self, *args, **kwargs)
-
-
-def fake_socket_constructor(cls, *args, **kwargs):
-    return cls(*args, **kwargs)
 
 
 class AbstractConnectionTestCase(tornado.testing.AsyncTestCase):
