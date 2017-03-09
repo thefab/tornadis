@@ -101,7 +101,7 @@ class ClientTestCase(tornado.testing.AsyncTestCase):
         res = yield c.connect()
         self.assertTrue(res)
         res2 = yield c.call('PING')
-        self.assertEqual(res2, "PONG")
+        self.assertEqual(res2, b"PONG")
         yield tornado.gen.sleep(2)
         res3 = yield c.call('PING')
         self.assertTrue(isinstance(res3, ConnectionError))
