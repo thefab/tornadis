@@ -92,8 +92,7 @@ class Connection(object):
         self.unix_domain_socket = unix_domain_socket
         self._state = ConnectionState()
         self._ioloop = ioloop or tornado.ioloop.IOLoop.instance()
-        cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000,
-                                             self._ioloop)
+        cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000)
         self.__periodic_callback = cb
         self._read_callback = read_callback
         self._close_callback = close_callback
