@@ -92,12 +92,11 @@ class Connection(object):
         self.unix_domain_socket = unix_domain_socket
         self._state = ConnectionState()
         self._ioloop = ioloop or tornado.ioloop.IOLoop.instance()
-
         if int(tornado.version[0]) >= 5:
             cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000)
         else:
-            cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000, self._ioloop)
-
+            cb = tornado.ioloop.PeriodicCallback(self._on_every_second, 1000,
+                                                 self._ioloop)
         self.__periodic_callback = cb
         self._read_callback = read_callback
         self._close_callback = close_callback
@@ -219,12 +218,12 @@ class Connection(object):
         try:
             self._ioloop.remove_handler(self.__socket_fileno)
             self._listened_events = 0
-        except:
+        except Exception:
             pass
         self.__socket_fileno = -1
         try:
             self.__socket.close()
-        except:
+        except Exception:
             pass
         self._state.set_disconnected()
         self._close_callback()

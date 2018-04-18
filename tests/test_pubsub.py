@@ -37,7 +37,7 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
         try:
             yield c.pubsub_pop_message()
             raise Exception("exception not raised")
-        except:
+        except Exception:
             pass
         res = yield c.pubsub_subscribe("foo1", "foo2")
         self.assertTrue(res)
@@ -46,7 +46,7 @@ class PubSubClientTestCase(tornado.testing.AsyncTestCase):
         try:
             yield c.call("PING")
             raise Exception("exception not raised")
-        except:
+        except Exception:
             pass
         res = yield c.pubsub_psubscribe("bar1*", "bar2*")
         self.assertTrue(res)

@@ -33,7 +33,7 @@ def format_args_in_redis_protocol(*args):
         '*4\r\n$4\r\nHSET\r\n$3\r\nkey\r\n$5\r\nfield\r\n$5\r\nvalue\r\n'
     """
     buf = WriteBuffer()
-    l = "*%d\r\n" % len(args)
+    l = "*%d\r\n" % len(args)  # noqa: E741
     if six.PY2:
         buf.append(l)
     else:  # pragma: no cover
@@ -60,7 +60,7 @@ def format_args_in_redis_protocol(*args):
             pass
         else:
             raise Exception("don't know what to do with %s" % type(arg))
-        l = "$%d\r\n" % len(arg)
+        l = "$%d\r\n" % len(arg)  # noqa: E741
         if six.PY2:
             buf.append(l)
         else:  # pragma: no cover
