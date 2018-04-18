@@ -1,5 +1,10 @@
 # CHANGES
 
+## Release 0.8.1
+
+- python 3.6 support
+- tornado 5 support
+
 ## Release 0.8.0
 
 - add support for automatic db selection in Client or Pool object (thanks

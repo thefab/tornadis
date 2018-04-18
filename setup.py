@@ -30,7 +30,7 @@ else:
 
 setup(
     name='tornadis',
-    version="0.8.0",
+    version="0.8.1",
     author="Fabien MARTY",
     author_email="fabien.marty@gmail.com",
     url="https://github.com/thefab/tornadis",
@@ -54,6 +54,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Utilities',
         'Topic :: System :: Distributed Computing',
         'Topic :: Software Development',
