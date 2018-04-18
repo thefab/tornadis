@@ -49,11 +49,11 @@ class ClientPool(object):
         if self.autoclose and self.client_timeout > 0:
             every = int(self.client_timeout) * 100
             if int(tornado.version[0]) >= 5:
-                cb = tornado.ioloop.PeriodicCallback(self._on_every_second,
-                                                     1000)
+                cb = tornado.ioloop.PeriodicCallback(self._autoclose,
+                                                     every)
             else:
-                cb = tornado.ioloop.PeriodicCallback(self._on_every_second,
-                                                     1000, self._ioloop)
+                cb = tornado.ioloop.PeriodicCallback(self._autoclose,
+                                                     every, self._ioloop)
             self.__autoclose_periodic = cb
             self.__autoclose_periodic.start()
 
