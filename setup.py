@@ -23,6 +23,8 @@ with open('requirements.txt') as reqs:
 
 if sys.version_info[:2] == (3, 2):
     install_requires.append("tornado>=4.2,<4.4")
+elif sys.version_info[:2] == (3, 3):
+    install_requires.append("tornado>=4.2,<5.0")
 else:
     install_requires.append("tornado>=4.2")
 
