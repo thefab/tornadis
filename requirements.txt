@@ -1,4 +1,6 @@
+tornado>=4.2,<5.0 ; python_version <= '2.7'
 tornado>=4.2,<4.4 ; python_version >= '3.2' and python_version < '3.3'
-tornado>=4.2 ; python_version < '3.2' or python_version >= '3.3'
+tornado>=4.2,<5.0 ; python_version >= '3.3' and python_version < '3.4'
+tornado>=4.2 ; python_version >= '3.4'
 hiredis>=0.2
 six>=1.9
