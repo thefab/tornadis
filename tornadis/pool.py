@@ -53,7 +53,7 @@ class ClientPool(object):
                                                      every)
             else:
                 cb = tornado.ioloop.PeriodicCallback(self._autoclose,
-                                                     every, self._ioloop)
+                                                     every, self.__ioloop)
             self.__autoclose_periodic = cb
             self.__autoclose_periodic.start()
 
