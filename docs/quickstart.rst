@@ -39,7 +39,7 @@ Go further: Pipeline
 Installation without pip
 ------------------------
 
-- install tornado_ >= 4.2
+- install tornado_  4.2 to 5.1.1 
 - install `python wrapper for hiredis`_
 - install six_
 - download and uncompress a `tornadis release`_
